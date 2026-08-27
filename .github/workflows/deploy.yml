@@ -12,7 +12,9 @@ jobs:
 
     steps:
       - name: Deploy API
+        if: ${{ secrets.RENDER_DEPLOY_HOOK_API != '' }}
         run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_API }}"
 
       - name: Deploy Worker
+        if: ${{ secrets.RENDER_DEPLOY_HOOK_WORKER != '' }}
         run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_WORKER }}"
