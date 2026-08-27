@@ -29,7 +29,7 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
+    "@google/generative-ai": "^0.24.1",
     "@nestjs/bullmq": "^10.2.1",
     "@nestjs/common": "^10.4.6",
     "@nestjs/config": "^3.3.0",
