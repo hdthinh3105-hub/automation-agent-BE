@@ -17,9 +17,7 @@ import { TicketPublicResponseDto } from '../dto/ticket.dto';
  */
 @Injectable()
 export class GetTicketPublicUseCase {
-  constructor(
-    @Inject(TICKET_REPOSITORY) private readonly ticketRepository: ITicketRepository,
-  ) {}
+  constructor(@Inject(TICKET_REPOSITORY) private readonly ticketRepository: ITicketRepository) {}
 
   async execute(ticketId: string): Promise<TicketPublicResponseDto> {
     const ticket = await this.ticketRepository.findById(ticketId);

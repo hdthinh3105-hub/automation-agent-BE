@@ -8,6 +8,8 @@ import { TelegramChannelAdapter } from './infrastructure/adapters/telegram-chann
 import { EmailChannelAdapter } from './infrastructure/adapters/email-channel.adapter';
 import { GmailChannelAdapter } from './infrastructure/adapters/gmail-channel.adapter';
 import { GmailPollingService } from './infrastructure/services/gmail-polling.service';
+import { TelegramUpdateProcessor } from './infrastructure/services/telegram-update.processor';
+import { TelegramPollingService } from './infrastructure/services/telegram-polling.service';
 import { TicketStateMachineService } from './domain/services/ticket-state-machine.service';
 import { CreateTicketUseCase } from './application/use-cases/create-ticket.use-case';
 import { UpdateTicketStatusUseCase } from './application/use-cases/update-ticket-status.use-case';
@@ -33,6 +35,8 @@ import { ConversationModule } from '@app/modules/conversation';
     EmailChannelAdapter,
     GmailChannelAdapter,
     GmailPollingService,
+    TelegramUpdateProcessor,
+    TelegramPollingService,
     TicketStateMachineService,
     CreateTicketUseCase,
     UpdateTicketStatusUseCase,

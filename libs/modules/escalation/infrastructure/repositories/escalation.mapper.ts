@@ -3,7 +3,11 @@ import {
   EscalationReason as PrismaEscalationReason,
   EscalationStatus as PrismaEscalationStatus,
 } from '@prisma/client';
-import { Escalation, EscalationReason, EscalationStatus } from '../../domain/entities/escalation.entity';
+import {
+  Escalation,
+  EscalationReason,
+  EscalationStatus,
+} from '../../domain/entities/escalation.entity';
 
 function assertKnownEnumValue<T extends Record<string, string>>(
   enumObj: T,

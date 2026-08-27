@@ -3,6 +3,12 @@
 
 **Link Postman: https://www.postman.com/hdthinh3105/workspace/automationagent**
 
+[![CI](https://github.com/hdthinh3105-hub/automation-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/hdthinh3105-hub/automation-agent/actions/workflows/ci.yml)
+[![Docker (GHCR)](https://img.shields.io/badge/Docker-GHCR-2496ed?logo=docker&logoColor=white)](https://github.com/hdthinh3105-hub/automation-agent/pkgs/container/automation-agent)
+[![Node](https://img.shields.io/badge/Node-%3E%3D%2020-339933?logo=node.js&logoColor=white)]()
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)]()
+[![NestJS](https://img.shields.io/badge/NestJS-10-E0234E?logo=nestjs&logoColor=white)]()
+
 Backend API cho hệ thống Automation/Agent tiếp nhận yêu cầu từ **nhiều kênh** (Web Chat, Telegram, Gmail/Email), tự động phân loại — phát hiện spam/trùng lặp/thiếu thông tin — trả lời bằng **RAG** (Retrieval-Augmented Generation) có trích dẫn nguồn, và **tự chuyển cho nhân viên (escalate)** khi độ tin cậy thấp hoặc vượt ngoài phạm vi tri thức đã nạp.
 
 > Dự án không phải 1 chatbot demo đơn thuần — mỗi quyết định kiến trúc (Clean Architecture, Channel Adapter Pattern, Hybrid Search + RRF, Confidence Scoring đa tín hiệu, Saga đơn giản cho AI pipeline) đều xuất phát từ yêu cầu thật của bài toán Automation/Agent, được ghi chú trực tiếp trong code và trong `TDD-Track-D-AI-Customer-Support.md`.
@@ -20,6 +26,7 @@ Backend API cho hệ thống Automation/Agent tiếp nhận yêu cầu từ **nh
 - [Biến môi trường](#biến-môi-trường)
 - [Gửi email qua Gmail REST API (thay SMTP)](#gửi-email-qua-gmail-rest-api-thay-smtp)
 - [Testing](#testing)
+- [CI/CD & Docker](#cicd--docker)
 - [Monitoring](#monitoring)
 - [Giới hạn đã biết](#giới-hạn-đã-biết)
 - [Tài liệu liên quan](#tài-liệu-liên-quan)
@@ -60,7 +67,7 @@ Backend API cho hệ thống Automation/Agent tiếp nhận yêu cầu từ **nh
                           ▼                          ▼                         ▼
                  ┌─────────────────┐      ┌────────────────────┐      ┌────────────────────┐
                  │ Groq / Gemini   │      │ Local Embedding    │      │ Cloudinary / Local │
-                 │ (LLM, fallback) │      │ (bge-small-en-v1.5)│      │ File Storage       │
+                 │ (LLM, fallback) │      │ (multilingual,384)│      │ File Storage       │
                  └─────────────────┘      └────────────────────┘      └────────────────────┘
 ```
 
@@ -168,7 +175,7 @@ erDiagram
 | ORM | Prisma | Type-safe, migration, raw SQL cho phần vector/full-text search |
 | Queue | BullMQ + Redis (ioredis) | Background job: parse tài liệu, embedding, gửi email, notification |
 | LLM | Groq (Llama 3.3, primary) + Google Gemini (fallback) | `LlmOrchestratorProvider` tự chuyển provider khi rate-limit/lỗi |
-| Embedding | `bge-small-en-v1.5` chạy local qua `@xenova/transformers` (mặc định) hoặc Gemini `gemini-embedding-001` | Không phụ thuộc rate-limit ngoài, tiết kiệm quota cho phần generation |
+| Embedding | `Xenova/paraphrase-multilingual-MiniLM-L12-v2` (384 chiều, 50+ ngôn ngữ, chạy local qua `@xenova/transformers` — mặc định) hoặc Gemini `gemini-embedding-001` | Không phụ thuộc rate-limit ngoài, tiết kiệm quota cho phần generation; đổi model qua `EMBEDDING_MODEL` |
 | Auth | JWT (access 15p + refresh token rotation, opaque `id.secret`) | RBAC 3 role: ADMIN / AGENT / VIEWER |
 | File Storage | Cloudinary (`resource_type: raw`) hoặc Local Filesystem | Lưu tài liệu Knowledge Base gốc (PDF/DOCX/TXT/MD) |
 | Kênh tiếp nhận | Web REST, Telegram Bot API, Gmail (IMAP polling + SMTP), Mailgun Inbound Webhook | Channel Adapter Pattern — cùng hội tụ 1 Use Case |
@@ -182,8 +189,8 @@ erDiagram
 
 ### Đa kênh (Multi-channel)
 - **Web** (Must-have): REST API + Web Chat Widget, khách hàng không cần đăng nhập.
-- **Telegram** (Should-have): webhook nhận/gửi tin nhắn qua Bot API.
-- **Gmail** (Could-have): polling IMAP mỗi 2 phút, lọc email tự động/hệ thống, trả lời qua SMTP (gửi bất đồng bộ qua Email Worker để không tranh CPU với AI pipeline).
+- **Telegram** (Should-have): nhận/gửi tin nhắn qua Bot API — 2 chế độ: **webhook** (khi có URL public, deploy lên Render) hoặc **long-polling `getUpdates`** (khi chạy local/Docker sau NAT, không cần URL, bật qua `TELEGRAM_POLLING_ENABLED=true`).
+- **Gmail** (Could-have): polling IMAP mỗi 2 phút, lọc email tự động/hệ thống, trả lời qua email được gửi bất đồng bộ qua Email Worker để không tranh CPU với AI pipeline.
 - **Mailgun Inbound Webhook** (Could-have): nhận email qua route forward.
 
 ### AI Processing Pipeline (`ProcessIncomingMessageUseCase`)
@@ -191,8 +198,8 @@ Classification → Spam Detection → Duplicate Detection (Jaccard similarity tr
 
 ### RAG Pipeline (Enterprise-grade)
 - **Chunking**: Recursive Character Splitting, ưu tiên ranh giới đoạn văn → câu → từ, giữ heading Markdown làm metadata `section`.
-- **Hybrid Search**: kết hợp Vector Similarity (pgvector cosine) + Full-text Search (Postgres `tsvector`) bằng **Reciprocal Rank Fusion (RRF)**.
-- **Re-ranking**: LLM chấm điểm relevance 0-10 cho top-N candidate, tự fallback về thứ tự RRF nếu LLM lỗi (không chặn pipeline).
+- **Hybrid Search**: kết hợp Vector Similarity (pgvector cosine) + Full-text Search (Postgres `tsvector` **OR-tokens** — tránh mất câu hỏi khi 1 token lạc quan hệ) bằng **Reciprocal Rank Fusion (RRF)**.
+- **Re-ranking**: LLM chấm điểm relevance 0-10 cho top-N candidate, blend với vector similarity (`0.6×llmScore/10 + 0.4×vectorSimilarity`), tự fallback về thứ tự RRF nếu LLM lỗi (không chặn pipeline).
 - **Confidence Scoring đa tín hiệu**: `0.5×avgTopSimilarity + 0.3×retrievalCoverage + 0.2×llmSelfScore` — không tin tuyệt đối vào LLM tự chấm điểm.
 - **Chống hallucination**: nếu không tìm được chunk liên quan, trả thẳng "không tìm thấy thông tin" thay vì để LLM tự bịa, đồng thời escalate.
 
@@ -249,15 +256,15 @@ cp .env.example .env
 # → điền JWT_ACCESS_SECRET / JWT_REFRESH_SECRET (chuỗi ngẫu nhiên ≥32 ký tự, vd: openssl rand -base64 48)
 # → điền GROQ_API_KEY / GEMINI_API_KEY nếu muốn chạy AI pipeline thật
 
-docker compose -f docker/docker-compose.yml up -d (đã có Neon và Upstash nên không cần chạy lệnh này)
-
 npm run prisma:generate
-npm run prisma:migrate:deploy (vui lòng không chạy lệnh này vì hiện đang có database của neon)   # hoặc prisma:migrate:dev khi phát triển thêm
-npm run seed    (vui lòng không chạy lệnh này vì hiện đang có database của neon)                 # tạo admin@example.com / ChangeMe123!
+npm run prisma:migrate:deploy   # hoặc prisma:migrate:dev khi phát triển thêm
+npm run seed                    # tạo admin@example.com / ChangeMe123!
 
 npm run start:dev               # API tại http://localhost:3000/api
 npm run start:worker:dev        # Worker process (queue: document-parser, embedding, email, notification)
 ```
+
+> **Docker đầy đủ:** nếu dùng toàn bộ stack (Postgres+Redis+API+Worker+Frontend) chạy từ workspace root, dùng `docker compose up -d --build` ở repo gốc (xem mục [CI/CD](#cicd--docker)). Muốn chỉ cài hạ tầng Postgres/Redis local: `docker compose -f docker/docker-compose.infra.yml up -d`.
 
 ### Thử nhanh bằng curl hoặc postman ( link postman https://go.postman.co/workspace/8f65c004-6c33-45cb-8e29-6e5558d375be Nếu sài Postman bằng link nhớ phải vào thêm vào Enviroment URL: base_url: http://localhost:3000 , url_main: https://automation-agent-fhbl.onrender.com )
 ```bash
@@ -285,9 +292,9 @@ Mọi response bọc trong envelope chuẩn `{ success, data, error, meta }`. M�
 | Redis | `REDIS_HOST`/`REDIS_PORT` hoặc `REDIS_URL` | Dùng cho BullMQ |
 | JWT | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | Bắt buộc ≥32 ký tự, khác nhau |
 | LLM | `GROQ_API_KEY`, `GEMINI_API_KEY`, `GROQ_MODEL`, `GEMINI_MODEL` | Optional lúc boot, throw rõ khi thực sự gọi mà thiếu key |
-| Embedding | `EMBEDDING_PROVIDER` (`local`/`gemini`), `EMBEDDING_DIMENSIONS` | |
-| RAG | `CHUNK_SIZE_TOKENS`, `RAG_TOP_K_RETRIEVAL`, `RAG_TOP_K_FINAL`, `AI_CONFIDENCE_ESCALATION_THRESHOLD`, `SPAM_SCORE_THRESHOLD` | Config-driven, không hard-code |
-| Kênh | `TELEGRAM_BOT_TOKEN`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `EMAIL_POLLING_ENABLED` | `GMAIL_APP_PASSWORD` dùng cho IMAP polling; bộ 3 `GMAIL_CLIENT_*` dùng để gửi qua REST API |
+| Embedding | `EMBEDDING_PROVIDER` (`local`/`gemini`), `EMBEDDING_MODEL` (mặc định `Xenova/paraphrase-multilingual-MiniLM-L12-v2`), `EMBEDDING_DIMENSIONS` | Chạy `npm run prefetch:model` để tải model trước (tránh giật lần embed đầu) |
+| RAG | `CHUNK_SIZE_TOKENS`, `RAG_TOP_K_RETRIEVAL` (mặc định 25), `RAG_TOP_K_FINAL` (mặc định 8), `AI_CONFIDENCE_ESCALATION_THRESHOLD`, `SPAM_SCORE_THRESHOLD` | Config-driven, không hard-code |
+| Kênh | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_POLLING_ENABLED` (true = long-poll getUpdates không cần URL public; false = webhook), `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `EMAIL_POLLING_ENABLED` | `GMAIL_APP_PASSWORD` dùng cho IMAP polling; bộ 3 `GMAIL_CLIENT_*` dùng để gửi qua REST API |
 | Storage | `STORAGE_DRIVER` (`local`/`cloudinary`), `CLOUDINARY_*` | |
 | Notification | `ADMIN_NOTIFICATION_EMAIL`, `SMTP_*` | Kênh thông báo nội bộ, tách khỏi kênh trả lời khách |
 
@@ -323,10 +330,39 @@ Kiểm tra: Worker logs sẽ có `Gmail API đã chấp nhận email, messageId=
 ## Testing
 
 ```bash
-npm run test
+npm run lint:ci      # ESLint (fail ngay cả khi có warning) — CI dùng lệnh này
+npm run typecheck    # tsc --noEmit — CI dùng lệnh này
+npm run test         # chạy Jest
+npm run test:ci      # Jest --ci + coverage — CI dùng lệnh này
 ```
 
-Unit test tập trung vào phần khó nhất: `TicketStateMachine`/`Ticket` entity (transition hợp lệ/không hợp lệ), `LoginUseCase` (mock toàn bộ Repository/Port). Chưa phủ 100% — xem `test/unit/`.
+Unit test tập trung vào phần khó nhất: `TicketStateMachine`/`Ticket` entity (transition hợp lệ/không hợp lệ), `LoginUseCase` (mock toàn bộ Repository/Port), `ProcessIncomingMessageUseCase` (mock toàn bộ providers qua Port), `MissingInfoDetectionService`. Chưa phủ 100% — xem `test/unit/`.
+
+> Lưu ý: trước khi chạy `typecheck` hoặc `nest build` cần `npm run prisma:generate` (Prisma client generate theo schema hiện tại).
+
+---
+
+## CI/CD & Docker
+
+GitHub Actions tự chạy mỗi lần push/PR vào `main`/`develop` (xem `.github/workflows/ci.yml`):
+
+| Bước | Lệnh | Vai trò |
+|---|---|---|
+| `lint` | `npm run lint:ci` | ESLint + Prettier rule, fail ở mức warning |
+| `typecheck` | `npm run typecheck` | TypeScript strict, đảm bảo không lọt type lỗi |
+| `test` | `npm run test:ci` | Jest + coverage, upload artifact report |
+| `build` | `npm run build` + `npm run build:worker` | Build Nest API + Worker, smoke-build Docker image |
+| `publish-docker` | Docker Buildx | Merge vào `main`: build & push `ghcr.io/<owner>/automation-agent` + `automation-agent-worker` (tag `sha-*` + `latest`) |
+
+Router ví dụ khi chạy full stack Docker từ workspace root:
+
+```
+Docker Compose: postgres (pgvector) + redis + api :3000 + worker + frontend :3001
+```
+
+Dependabot tự động gộp cập nhật theo nhóm (nestjs/prisma/typescript/eslint..., Docker base image, GitHub Actions) — thứ 7 hằng tuần, xem `.github/dependabot.yml`.
+
+Muốn cập nhật dependency có chủ đích: để Dependabot tạo PR (nhóm nhỏ), build thử qua CI là gate an toàn trước khi merge.
 
 ---
 
@@ -349,6 +385,7 @@ Trung thực về phạm vi — hệ thống được thiết kế theo nguyên 
 - **Gửi Mail** dùng Gmail REST API (OAuth2) để không bị Render free tier chặn SMTP — chỉ cần cấu hình đủ bộ `GMAIL_CLIENT_ID/SECRET/REFRESH_TOKEN` cho đúng account `GMAIL_USER`. Nếu chưa cấu hình OAuth, mailer fallback về SMTP (chỉ chạy được local, Render sẽ `Connection timeout`).
 - **Duplicate Detection** dùng Jaccard similarity trên tập từ (đơn giản hoá), chưa dùng vector similarity qua RAG Module như thiết kế đầy đủ.
 - **SLA Watcher** chưa có cờ "đã thông báo" — nếu Escalation vẫn `PENDING` qua nhiều chu kỳ quét (5 phút), thông báo có thể lặp lại tới khi Agent Acknowledge.
+- **Telegram long-polling** chỉ nên chạy đúng **1 instance** duy nhất (Telegram cấm nhiều nguồn update đồng thời) — Docker local chỉ có 1 container API nên an toàn; nếu scale ngang API thành nhiều replica cần dùng webhook thay vì polling.
 - **Kênh Email/Mailgun** mỗi email tạo 1 ticket mới, chưa gộp email cùng chuỗi (`In-Reply-To`) vào 1 ticket cũ.
 - **Re-ranking bằng LLM** tiêu tốn thêm 1 lượt gọi LLM cho mỗi câu hỏi — có thể tắt bằng cách để `topKRetrieval ≤ topKFinal` nếu cần tiết kiệm quota free-tier.
 - **Free tier LLM (Groq/Gemini)** có thể bị rate-limit ở lượng truy cập cao — đã có fallback chain + escalate tự động khi cả 2 provider cùng lỗi, không để ticket kẹt trạng thái.

@@ -76,7 +76,8 @@ export class ChunkingService {
     const flush = (): void => {
       if (current.trim()) chunks.push(current);
       // Overlap: giữ lại phần đuôi của chunk vừa đóng làm phần đầu chunk kế tiếp.
-      current = current.length > this.chunkOverlapChars ? current.slice(-this.chunkOverlapChars) : current;
+      current =
+        current.length > this.chunkOverlapChars ? current.slice(-this.chunkOverlapChars) : current;
     };
 
     for (const paragraph of paragraphs) {

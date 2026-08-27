@@ -1,7 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ESCALATION_REPOSITORY, IEscalationRepository, EscalationStatus } from '@app/modules/escalation';
+import {
+  ESCALATION_REPOSITORY,
+  IEscalationRepository,
+  EscalationStatus,
+} from '@app/modules/escalation';
 
 /**
  * SLA Watcher Worker (TDD Mục 12, Should have) — quét mỗi 5 phút các

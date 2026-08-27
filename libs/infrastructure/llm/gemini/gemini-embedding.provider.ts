@@ -27,9 +27,13 @@ export class GeminiEmbeddingProvider implements IEmbeddingProvider {
   async embed(texts: string[]): Promise<number[][]> {
     if (texts.length === 0) return [];
     if (!this.client) {
-      throw new DomainException(ErrorCode.EMBEDDING_PROVIDER_ERROR, 'GEMINI_API_KEY is not configured', {
-        provider: 'gemini',
-      });
+      throw new DomainException(
+        ErrorCode.EMBEDDING_PROVIDER_ERROR,
+        'GEMINI_API_KEY is not configured',
+        {
+          provider: 'gemini',
+        },
+      );
     }
     try {
       const model = this.client.getGenerativeModel({ model: this.modelName });
@@ -41,10 +45,14 @@ export class GeminiEmbeddingProvider implements IEmbeddingProvider {
       return results;
     } catch (error) {
       this.logger.error(`Gemini embedding failed: ${(error as Error).message}`);
-      throw new DomainException(ErrorCode.EMBEDDING_PROVIDER_ERROR, 'Gemini embedding provider failed', {
-        provider: 'gemini',
-        cause: (error as Error).message,
-      });
+      throw new DomainException(
+        ErrorCode.EMBEDDING_PROVIDER_ERROR,
+        'Gemini embedding provider failed',
+        {
+          provider: 'gemini',
+          cause: (error as Error).message,
+        },
+      );
     }
   }
 }

@@ -11,8 +11,11 @@ import { LocalFileStorage } from './local-file-storage.provider';
     LocalFileStorage,
     {
       provide: FILE_STORAGE,
-      useFactory: (configService: ConfigService, cloud: CloudinaryFileStorage, local: LocalFileStorage) =>
-        configService.get<string>('storage.driver', 'local') === 'cloudinary' ? cloud : local,
+      useFactory: (
+        configService: ConfigService,
+        cloud: CloudinaryFileStorage,
+        local: LocalFileStorage,
+      ) => (configService.get<string>('storage.driver', 'local') === 'cloudinary' ? cloud : local),
       inject: [ConfigService, CloudinaryFileStorage, LocalFileStorage],
     },
   ],

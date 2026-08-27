@@ -123,9 +123,16 @@ export class GmailPollingService {
       this.logger.log(`uid=${uid} -> Tạo ticket "${ticket.id}" thành công.`);
 
       const replyText = await this.buildReplyText(ticket.id, ticket.status);
-      await this.gmailChannelAdapter.sendMail(command.customerEmail, `Re: ${command.subject}`, replyText);
+      await this.gmailChannelAdapter.sendMail(
+        command.customerEmail,
+        `Re: ${command.subject}`,
+        replyText,
+      );
     } catch (error) {
-      this.logger.error(`!!! uid=${uid} XỬ LÝ THẤT BẠI: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `!!! uid=${uid} XỬ LÝ THẤT BẠI: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
     } finally {
       try {
         await client.messageFlagsAdd(uid, ['\\Seen'], { uid: true });

@@ -18,7 +18,9 @@ import { WorkerModule } from './worker.module';
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.createApplicationContext(WorkerModule);
   // eslint-disable-next-line no-console
-  console.log('🛠️  Worker process started — Document Parser + Embedding queues are being processed.');
+  console.log(
+    '🛠️  Worker process started — Document Parser + Embedding queues are being processed.',
+  );
 
   const port = Number(process.env.WORKER_PORT ?? process.env.PORT ?? 3001);
   const healthServer = http.createServer((_req, res) => {
@@ -27,7 +29,9 @@ async function bootstrap(): Promise<void> {
   });
   healthServer.listen(port, () => {
     // eslint-disable-next-line no-console
-    console.log(`🩺 Worker health-check server listening on port ${port} (Render free-tier requirement)`);
+    console.log(
+      `🩺 Worker health-check server listening on port ${port} (Render free-tier requirement)`,
+    );
   });
 
   process.on('SIGTERM', async () => {

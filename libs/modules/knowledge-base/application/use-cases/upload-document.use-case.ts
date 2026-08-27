@@ -7,7 +7,10 @@ import {
   KNOWLEDGE_DOCUMENT_REPOSITORY,
   IKnowledgeDocumentRepository,
 } from '../ports/knowledge-document-repository.port';
-import { KnowledgeDocument, DocumentSourceType } from '../../domain/entities/knowledge-document.entity';
+import {
+  KnowledgeDocument,
+  DocumentSourceType,
+} from '../../domain/entities/knowledge-document.entity';
 import {
   DocumentInvalidFormatException,
   DocumentTooLargeException,

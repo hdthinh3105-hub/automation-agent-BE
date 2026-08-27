@@ -74,7 +74,9 @@ export class ProcessIncomingMessageUseCase {
     }
 
     const messages = await this.ticketRepository.findMessages(ticketId);
-    const lastCustomerMessage = [...messages].reverse().find((m) => m.sender === MessageSender.CUSTOMER);
+    const lastCustomerMessage = [...messages]
+      .reverse()
+      .find((m) => m.sender === MessageSender.CUSTOMER);
     if (!lastCustomerMessage) {
       this.logger.warn(`Ticket "${ticketId}" has no customer message, skipping AI pipeline`);
       return this.buildResult(ticket, false, false, [], null, null, false);
@@ -87,7 +89,9 @@ export class ProcessIncomingMessageUseCase {
       ticket.markSpamAndClose('system:ai_spam_detection');
       await this.ticketRepository.save(ticket);
       await this.dispatchEvents(ticket);
-      this.logger.log(`Ticket "${ticketId}" marked as SPAM (score=${spamResult.score.toFixed(2)}), closed.`);
+      this.logger.log(
+        `Ticket "${ticketId}" marked as SPAM (score=${spamResult.score.toFixed(2)}), closed.`,
+      );
       return this.buildResult(ticket, true, false, [], null, null, false);
     }
 
@@ -95,13 +99,20 @@ export class ProcessIncomingMessageUseCase {
     const classification = await this.classificationService.classify(content, ticketId);
 
     // ---- Bước 3: Duplicate Detection ----
-    const duplicateResult = await this.duplicateDetectionService.detect(ticketId, ticket.customerId, content);
+    const duplicateResult = await this.duplicateDetectionService.detect(
+      ticketId,
+      ticket.customerId,
+      content,
+    );
     if (duplicateResult.isDuplicate && duplicateResult.duplicateOfTicketId) {
       ticket.markDuplicateOf(duplicateResult.duplicateOfTicketId);
     }
 
     // ---- Bước 4: Missing Information Detection ----
-    const missingInfoFlags = this.missingInfoDetectionService.detect(classification.category, content);
+    const missingInfoFlags = this.missingInfoDetectionService.detect(
+      classification.category,
+      content,
+    );
 
     // ---- Bước 5: Priority Detection ----
     const priority = this.priorityDetectionService.detect(classification.category, content);
@@ -113,17 +124,38 @@ export class ProcessIncomingMessageUseCase {
 
     if (missingInfoFlags.length > 0) {
       this.transitionIfNeeded(ticket, TicketStatus.WAITING_CUSTOMER, 'system:ai_missing_info');
+      const askContent = this.buildMissingInfoPrompt(missingInfoFlags);
+      const aiMessage = TicketMessage.create({
+        id: uuid(),
+        ticketId,
+        sender: MessageSender.AI,
+        content: askContent,
+      });
       await this.ticketRepository.save(ticket);
+      await this.ticketRepository.saveMessage(aiMessage);
+      await this.appendTurnUseCase.execute(ticketId, TurnRole.ASSISTANT, askContent);
       await this.dispatchEvents(ticket);
       this.logger.log(
-        `Ticket "${ticketId}" waiting for customer — missing info: ${missingInfoFlags.join(', ')}`,
+        `Ticket "${ticketId}" waiting for customer — missing info: ${missingInfoFlags.join(', ')}. Đã nhắc khách cung cấp thêm thông tin.`,
       );
-      return this.buildResult(ticket, false, duplicateResult.isDuplicate, missingInfoFlags, null, null, false);
+      return this.buildResult(
+        ticket,
+        false,
+        duplicateResult.isDuplicate,
+        missingInfoFlags,
+        null,
+        askContent,
+        false,
+      );
     }
 
     if (duplicateResult.isDuplicate) {
       await this.ticketRepository.save(ticket);
-      await this.escalate(ticket, 'COMPLEX_CASE', `Duplicate of ticket ${duplicateResult.duplicateOfTicketId}`);
+      await this.escalate(
+        ticket,
+        'COMPLEX_CASE',
+        `Duplicate of ticket ${duplicateResult.duplicateOfTicketId}`,
+      );
       return this.buildResult(ticket, false, true, missingInfoFlags, null, null, true);
     }
 
@@ -151,18 +183,28 @@ export class ProcessIncomingMessageUseCase {
       await this.ticketRepository.save(ticket);
 
       // ---- Bước 9: Escalation Decision (Routing Module) ----
-      const routingDecision = this.determineRoutingUseCase.execute({ confidence: answerResult.confidence });
+      const routingDecision = this.determineRoutingUseCase.execute({
+        confidence: answerResult.confidence,
+      });
 
       if (routingDecision.action === 'ESCALATE') {
         await this.escalate(ticket, 'LOW_CONFIDENCE', routingDecision.reason);
-        await this.appendTurnUseCase.execute(ticketId, TurnRole.ASSISTANT, answerResult.answer);
+        const escalateContent = `${answerResult.answer}\n\n(Do độ chính xác có hạn, yêu cầu của bạn đã được chuyển cho nhân viên hỗ trợ và sẽ được phản hồi sớm nhất.)`;
+        const escalateMessage = TicketMessage.create({
+          id: uuid(),
+          ticketId,
+          sender: MessageSender.AI,
+          content: escalateContent,
+        });
+        await this.ticketRepository.saveMessage(escalateMessage);
+        await this.appendTurnUseCase.execute(ticketId, TurnRole.ASSISTANT, escalateContent);
         return this.buildResult(
           ticket,
           false,
           false,
           missingInfoFlags,
           answerResult.confidence,
-          answerResult.answer,
+          escalateContent,
           true,
         );
       }
@@ -210,6 +252,19 @@ export class ProcessIncomingMessageUseCase {
       await this.escalate(ticket, 'COMPLEX_CASE', `RAG pipeline failed: ${reason}`);
       return this.buildResult(ticket, false, false, missingInfoFlags, null, null, true);
     }
+  }
+
+  private buildMissingInfoPrompt(flags: string[]): string {
+    if (flags.includes('MISSING_ORDER_CODE')) {
+      return 'Để chúng tôi hỗ trợ chính xác nhất, bạn vui lòng cung cấp mã đơn hàng (dạng SV-xxxxxxxx).';
+    }
+    if (flags.includes('MISSING_ISSUE_DETAIL')) {
+      return 'Để hỗ trợ tốt hơn, bạn vui lòng mô tả chi tiết hơn sự cố đang gặp phải (dấu hiệu, thời điểm, nội dung lỗi...).';
+    }
+    if (flags.includes('MISSING_COMPLAINT_DETAIL')) {
+      return 'Chúng tôi rất tiếc vì trải nghiệm không tốt. Bạn vui lòng cho biết thêm chi tiết vấn đề để chúng tôi xử lý nhanh nhất.';
+    }
+    return 'Bạn vui lòng cung cấp thêm thông tin để chúng tôi hỗ trợ chính xác hơn.';
   }
 
   private transitionIfNeeded(ticket: Ticket, target: TicketStatus, actor: string): void {

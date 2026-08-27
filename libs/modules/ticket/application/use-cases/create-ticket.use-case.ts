@@ -30,7 +30,9 @@ export class CreateTicketUseCase {
     private readonly findOrCreateCustomer: FindOrCreateCustomerUseCase,
     private readonly appendTurn: AppendTurnUseCase,
     private readonly eventEmitter: EventEmitter2,
-    @Optional() @Inject(AI_PIPELINE_TRIGGER) private readonly aiPipelineTrigger?: IAiPipelineTrigger,
+    @Optional()
+    @Inject(AI_PIPELINE_TRIGGER)
+    private readonly aiPipelineTrigger?: IAiPipelineTrigger,
   ) {}
 
   async execute(command: CreateTicketCommand): Promise<TicketResponseDto> {

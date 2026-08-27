@@ -16,7 +16,9 @@ module.exports = {
     '@typescript-eslint/interface-name-prefix': 'off',
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
-    '@typescript-eslint/no-explicit-any': 'warn',
+    // Settings (SystemSetting) lưu value dạng JSON động nên `any` là chủ ý —
+    // CI dùng lint:ci với --max-warnings 0 để vẫn fail sớm trên các rule khác.
+    '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', ignoreRestSiblings: true }],
   },
 };

@@ -20,6 +20,8 @@ import { AuditModule } from '@app/modules/audit';
 import { NotificationModule } from '@app/modules/notification';
 import { DashboardModule } from '@app/modules/dashboard';
 import { MonitoringModule } from '@app/modules/monitoring';
+import { AdminModule } from '@app/modules/admin';
+import { SettingsModule } from '@app/modules/settings';
 import { AppController } from './app.controller';
 import { StorageModule } from '@app/infrastructure';
 
@@ -58,6 +60,8 @@ import { StorageModule } from '@app/infrastructure';
     NotificationModule,
     DashboardModule,
     MonitoringModule,
+    AdminModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [

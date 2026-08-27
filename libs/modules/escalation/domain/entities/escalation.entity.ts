@@ -67,7 +67,9 @@ export class Escalation extends AggregateRoot<string> {
       acknowledgedAt: null,
       resolvedAt: null,
     });
-    escalation.addDomainEvent(new EscalationCreatedEvent(escalation.id, params.ticketId, params.reason));
+    escalation.addDomainEvent(
+      new EscalationCreatedEvent(escalation.id, params.ticketId, params.reason),
+    );
     return escalation;
   }
 
@@ -113,7 +115,10 @@ export class Escalation extends AggregateRoot<string> {
 
   public acknowledge(agentId: string): void {
     if (this.props.status !== EscalationStatus.PENDING) {
-      throw new InvalidEscalationTransitionException(this.props.status, EscalationStatus.ACKNOWLEDGED);
+      throw new InvalidEscalationTransitionException(
+        this.props.status,
+        EscalationStatus.ACKNOWLEDGED,
+      );
     }
     this.props.status = EscalationStatus.ACKNOWLEDGED;
     this.props.assignedAgentId = agentId;

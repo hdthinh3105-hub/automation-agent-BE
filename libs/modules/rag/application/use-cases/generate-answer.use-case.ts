@@ -61,9 +61,14 @@ export class GenerateAnswerUseCase {
     }
 
     const { messages, citations } = this.promptBuilderService.build(query, chunks);
-    const llmResult = await this.llmProvider.complete(messages, { temperature: 0.2, maxTokens: 800 });
+    const llmResult = await this.llmProvider.complete(messages, {
+      temperature: 0.2,
+      maxTokens: 800,
+    });
 
-    const { cleanedAnswer, selfScore } = this.confidenceScoringService.parseLlmSelfScore(llmResult.content);
+    const { cleanedAnswer, selfScore } = this.confidenceScoringService.parseLlmSelfScore(
+      llmResult.content,
+    );
     const confidenceBreakdown = this.confidenceScoringService.score({
       usedChunks: chunks,
       topKFinal: this.topKFinal,
@@ -74,14 +79,20 @@ export class GenerateAnswerUseCase {
 
     this.eventEmitter.emit(
       'rag.answer_generated',
-      new AnswerGeneratedEvent(query, confidenceBreakdown.score, chunks.map((c) => c.chunk.id)),
+      new AnswerGeneratedEvent(
+        query,
+        confidenceBreakdown.score,
+        chunks.map((c) => c.chunk.id),
+      ),
     );
     if (needsEscalation) {
       this.eventEmitter.emit(
         'rag.low_confidence_answer',
         new LowConfidenceAnswerEvent(query, confidenceBreakdown.score, 'BELOW_THRESHOLD'),
       );
-      this.logger.log(`Query "${query}" answered with low confidence (${confidenceBreakdown.score.toFixed(2)}) -> needsEscalation=true`);
+      this.logger.log(
+        `Query "${query}" answered with low confidence (${confidenceBreakdown.score.toFixed(2)}) -> needsEscalation=true`,
+      );
     }
 
     return {

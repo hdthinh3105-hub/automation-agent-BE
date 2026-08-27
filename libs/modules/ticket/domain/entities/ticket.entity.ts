@@ -206,7 +206,13 @@ export class Ticket extends AggregateRoot<string> {
     this.props.status = TicketStatus.CLOSED;
     this.props.updatedAt = new Date();
     this.addDomainEvent(
-      new TicketStatusChangedEvent(this.id, fromStatus, TicketStatus.CLOSED, changedBy, 'SPAM_DETECTED'),
+      new TicketStatusChangedEvent(
+        this.id,
+        fromStatus,
+        TicketStatus.CLOSED,
+        changedBy,
+        'SPAM_DETECTED',
+      ),
     );
   }
 }

@@ -46,7 +46,9 @@ export class AuditListenerService {
     } catch (error) {
       // Audit không bao giờ được làm sập luồng nghiệp vụ chính (TDD Mục
       // 8 — non-fatal, giống PromptLogService).
-      this.logger.warn(`Failed to record audit log for event "${name}": ${(error as Error).message}`);
+      this.logger.warn(
+        `Failed to record audit log for event "${name}": ${(error as Error).message}`,
+      );
     }
   }
 
@@ -69,15 +71,35 @@ export class AuditListenerService {
       };
     }
     if (eventName.startsWith('escalation.')) {
-      return { resourceType: 'Escalation', resourceId: escalationId ?? 'unknown', actorType: ActorType.SYSTEM, actorId: null };
+      return {
+        resourceType: 'Escalation',
+        resourceId: escalationId ?? 'unknown',
+        actorType: ActorType.SYSTEM,
+        actorId: null,
+      };
     }
     if (eventName.startsWith('knowledge_base.') || eventName.startsWith('rag.')) {
-      return { resourceType: 'KnowledgeDocument', resourceId: documentId ?? 'unknown', actorType: ActorType.SYSTEM, actorId: null };
+      return {
+        resourceType: 'KnowledgeDocument',
+        resourceId: documentId ?? 'unknown',
+        actorType: ActorType.SYSTEM,
+        actorId: null,
+      };
     }
     if (eventName.startsWith('identity.')) {
-      return { resourceType: 'User', resourceId: userId ?? 'unknown', actorType: ActorType.USER, actorId: userId ?? null };
+      return {
+        resourceType: 'User',
+        resourceId: userId ?? 'unknown',
+        actorType: ActorType.USER,
+        actorId: userId ?? null,
+      };
     }
-    return { resourceType: 'Unknown', resourceId: 'unknown', actorType: ActorType.SYSTEM, actorId: null };
+    return {
+      resourceType: 'Unknown',
+      resourceId: 'unknown',
+      actorType: ActorType.SYSTEM,
+      actorId: null,
+    };
   }
 
   private inferActorType(changedBy?: string): ActorType {

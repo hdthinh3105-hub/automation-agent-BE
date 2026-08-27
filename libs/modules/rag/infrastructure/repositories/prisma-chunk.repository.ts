@@ -60,7 +60,9 @@ export class PrismaChunkRepository implements IChunkRepository {
     });
     const embeddedIds = new Set(embedded.map((e) => e.chunkId));
 
-    return allChunks.filter((c) => !embeddedIds.has(c.id)).map((record) => ChunkMapper.toDomain(record));
+    return allChunks
+      .filter((c) => !embeddedIds.has(c.id))
+      .map((record) => ChunkMapper.toDomain(record));
   }
 
   async saveEmbedding(embedding: ChunkEmbedding): Promise<void> {
@@ -111,6 +113,19 @@ export class PrismaChunkRepository implements IChunkRepository {
     // dữ liệu Assessment; thêm generated column + GIN index là tối ưu
     // hiệu năng có thể làm sau nếu dữ liệu KB lớn (Should-have, TDD Mục
     // 14.1), không đổi API/behavior khi thêm sau.
+    //
+    // OR-tokens thay vì plainto_tsquery (AND mọi token): tiếng Việt
+    // không có stemming, kỹ thuật AND làm loại bỏ chunk chứa đúng từ
+    // khoá nòng cốt (VD "hoàn tiền") chỉ vì thiếu từ phụ ("bao lâu").
+    const tokens = queryText
+      .toLowerCase()
+      .match(/[a-zA-Z0-9_À-ỹ]+/g)
+      ?.filter((t, i, arr) => t.length >= 2 && arr.indexOf(t) === i)
+      .slice(0, 15)
+      .join(' | ');
+
+    if (!tokens) return [];
+
     const rows = await this.prisma.$queryRaw<RawChunkRow[]>`
       SELECT
         kc.id AS "id",
@@ -121,11 +136,11 @@ export class PrismaChunkRepository implements IChunkRepository {
         kc.section AS "section",
         kc.created_at AS "createdAt",
         kd.title AS "documentTitle",
-        ts_rank(to_tsvector('simple', kc.content), plainto_tsquery('simple', ${queryText})) AS "score"
+        ts_rank(to_tsvector('simple', kc.content), to_tsquery('simple', ${tokens})) AS "score"
       FROM knowledge_chunks kc
       JOIN knowledge_documents kd ON kd.id = kc.document_id
       WHERE kd.status = 'READY' AND kd.deleted_at IS NULL
-        AND to_tsvector('simple', kc.content) @@ plainto_tsquery('simple', ${queryText})
+        AND to_tsvector('simple', kc.content) @@ to_tsquery('simple', ${tokens})
       ORDER BY "score" DESC
       LIMIT ${topK}
     `;

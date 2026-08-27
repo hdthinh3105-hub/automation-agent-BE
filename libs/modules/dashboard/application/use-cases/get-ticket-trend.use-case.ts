@@ -1,11 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { DASHBOARD_READ_REPOSITORY, IDashboardReadRepository } from '../ports/dashboard-read-repository.port';
+import {
+  DASHBOARD_READ_REPOSITORY,
+  IDashboardReadRepository,
+} from '../ports/dashboard-read-repository.port';
 import { TrendDto } from '../dto/dashboard.dto';
 
 @Injectable()
 export class GetTicketTrendUseCase {
   constructor(
-    @Inject(DASHBOARD_READ_REPOSITORY) private readonly dashboardReadRepository: IDashboardReadRepository,
+    @Inject(DASHBOARD_READ_REPOSITORY)
+    private readonly dashboardReadRepository: IDashboardReadRepository,
   ) {}
 
   async execute(from?: string, to?: string): Promise<TrendDto[]> {

@@ -35,7 +35,9 @@ export class AddCustomerMessageUseCase {
     private readonly stateMachine: TicketStateMachineService,
     private readonly eventEmitter: EventEmitter2,
     private readonly appendTurn: AppendTurnUseCase,
-    @Optional() @Inject(AI_PIPELINE_TRIGGER) private readonly aiPipelineTrigger?: IAiPipelineTrigger,
+    @Optional()
+    @Inject(AI_PIPELINE_TRIGGER)
+    private readonly aiPipelineTrigger?: IAiPipelineTrigger,
   ) {}
 
   async execute(ticketId: string, content: string): Promise<TicketMessageResponseDto> {

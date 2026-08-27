@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PriorityLevel } from '@app/modules/ticket';
 import { TicketCategory } from '../../domain/value-objects/category.vo';
 
-const URGENT_KEYWORDS = /(khẩn cấp|gấp lắm|mất tiền|gian lận|sập hệ thống|không thể truy cập|24\/7)/i;
+const URGENT_KEYWORDS =
+  /(khẩn cấp|gấp lắm|mất tiền|gian lận|sập hệ thống|không thể truy cập|24\/7)/i;
 const HIGH_KEYWORDS = /(không đăng nhập được|lỗi thanh toán|không nhận được hàng|bị trừ tiền)/i;
 
 /**

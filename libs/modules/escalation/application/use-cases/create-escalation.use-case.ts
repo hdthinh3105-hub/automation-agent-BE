@@ -1,7 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { v4 as uuid } from 'uuid';
-import { ITicketRepository, TICKET_REPOSITORY, TicketStatus, TicketNotFoundException } from '@app/modules/ticket';
+import {
+  ITicketRepository,
+  TICKET_REPOSITORY,
+  TicketStatus,
+  TicketNotFoundException,
+} from '@app/modules/ticket';
 import { ESCALATION_REPOSITORY, IEscalationRepository } from '../ports/escalation-repository.port';
 import { Escalation, EscalationReason } from '../../domain/entities/escalation.entity';
 import { EscalationResponseDto } from '../dto/escalation.dto';

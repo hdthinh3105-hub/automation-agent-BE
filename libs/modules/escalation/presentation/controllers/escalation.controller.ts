@@ -44,7 +44,9 @@ export class EscalationController {
 
   @Get()
   @Roles(Role.AGENT, Role.ADMIN)
-  async list(@Query() query: ListEscalationsQueryDto): Promise<PaginatedResult<EscalationResponseDto>> {
+  async list(
+    @Query() query: ListEscalationsQueryDto,
+  ): Promise<PaginatedResult<EscalationResponseDto>> {
     return this.listEscalationsUseCase.execute({
       status: query.status,
       assignedAgentId: query.assignedAgentId,

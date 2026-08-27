@@ -16,7 +16,9 @@ import { DocumentUploadedEvent } from '@app/modules/knowledge-base';
 export class DocumentUploadedListener {
   private readonly logger = new Logger(DocumentUploadedListener.name);
 
-  constructor(@InjectQueue(DOCUMENT_PARSER_QUEUE) private readonly queue: Queue<DocumentParserJobData>) {}
+  constructor(
+    @InjectQueue(DOCUMENT_PARSER_QUEUE) private readonly queue: Queue<DocumentParserJobData>,
+  ) {}
 
   @OnEvent('knowledge_base.document_uploaded')
   async handle(event: DocumentUploadedEvent): Promise<void> {

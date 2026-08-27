@@ -3,8 +3,14 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { v4 as uuid } from 'uuid';
 import { NOTIFICATION_QUEUE, NotificationJobData } from '@app/infrastructure';
-import { NOTIFICATION_LOG_REPOSITORY, INotificationLogRepository } from '../ports/notification-log-repository.port';
-import { NotificationLog, NotificationChannel } from '../../domain/entities/notification-log.entity';
+import {
+  NOTIFICATION_LOG_REPOSITORY,
+  INotificationLogRepository,
+} from '../ports/notification-log-repository.port';
+import {
+  NotificationLog,
+  NotificationChannel,
+} from '../../domain/entities/notification-log.entity';
 
 export interface SendNotificationCommand {
   type: string;
@@ -24,7 +30,8 @@ export interface SendNotificationCommand {
 @Injectable()
 export class SendNotificationUseCase {
   constructor(
-    @Inject(NOTIFICATION_LOG_REPOSITORY) private readonly notificationLogRepository: INotificationLogRepository,
+    @Inject(NOTIFICATION_LOG_REPOSITORY)
+    private readonly notificationLogRepository: INotificationLogRepository,
     @InjectQueue(NOTIFICATION_QUEUE) private readonly notificationQueue: Queue<NotificationJobData>,
   ) {}
 

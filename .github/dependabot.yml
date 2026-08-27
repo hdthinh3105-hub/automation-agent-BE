@@ -1,0 +1,44 @@
+version: 2
+updates:
+  # Dependencies runtime (npm)
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: saturday
+      time: "09:00"
+      timezone: "Asia/Ho_Chi_Minh"
+    open-pull-requests-limit: 10
+    versioning-strategy: increase
+    groups:
+      nestjs:
+        patterns: ["@nestjs/*", "@nestjs/**"]
+      prisma:
+        patterns: ["prisma", "@prisma/client"]
+      typescript:
+        patterns: ["typescript", "ts-jest", "@types/*"]
+      eslint-prettier:
+        patterns: ["eslint", "eslint-*", "@typescript-eslint/*", "prettier", "prettier-*"]
+      react-ecosystem:
+        patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
+      redis-queue:
+        patterns: ["bullmq", "@nestjs/bullmq", "ioredis"]
+    ignore:
+      # Embedding model + runtime tự quản, không để Dependabot bump giữa chừng
+      - dependency-name: "@xenova/transformers"
+
+  # Dockerfile base image
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  # GitHub Actions versions
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

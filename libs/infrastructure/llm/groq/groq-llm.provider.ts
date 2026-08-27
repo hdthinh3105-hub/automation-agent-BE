@@ -30,7 +30,10 @@ export class GroqLlmProvider implements ILlmProvider {
     this.client = apiKey ? new Groq({ apiKey }) : null;
   }
 
-  async complete(messages: LlmMessage[], options?: LlmCompletionOptions): Promise<LlmCompletionResult> {
+  async complete(
+    messages: LlmMessage[],
+    options?: LlmCompletionOptions,
+  ): Promise<LlmCompletionResult> {
     if (!this.client) {
       throw new DomainException(ErrorCode.LLM_PROVIDER_ERROR, 'GROQ_API_KEY is not configured', {
         provider: this.providerName,

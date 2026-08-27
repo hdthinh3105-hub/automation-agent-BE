@@ -99,7 +99,9 @@ export class GmailChannelAdapter implements IChannelAdapter {
    */
   async sendMail(to: string, subject: string, text: string): Promise<void> {
     if (!this.gmailUser || (!this.gmailAppPassword && !this.useGmailApi)) {
-      this.logger.warn('GMAIL_USER + (GMAIL_APP_PASSWORD hoặc GMAIL_REFRESH_TOKEN) chưa cấu hình — bỏ qua gửi email phản hồi.');
+      this.logger.warn(
+        'GMAIL_USER + (GMAIL_APP_PASSWORD hoặc GMAIL_REFRESH_TOKEN) chưa cấu hình — bỏ qua gửi email phản hồi.',
+      );
       return;
     }
     try {
@@ -114,7 +116,10 @@ export class GmailChannelAdapter implements IChannelAdapter {
     } catch (error) {
       // Lỗi enqueue (Redis down...) khác hẳn lỗi SMTP — vẫn log rõ
       // nhưng không throw để không làm hỏng luồng tạo ticket/mark \Seen.
-      this.logger.error(`Enqueue email thất bại: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `Enqueue email thất bại: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
     }
   }
 
@@ -129,7 +134,9 @@ export class GmailChannelAdapter implements IChannelAdapter {
    */
   async sendMailDirect(to: string, subject: string, text: string): Promise<void> {
     if (!this.gmailUser || (!this.gmailAppPassword && !this.useGmailApi)) {
-      this.logger.warn('GMAIL_USER + (GMAIL_APP_PASSWORD hoặc GMAIL_REFRESH_TOKEN) chưa cấu hình — bỏ qua gửi email phản hồi.');
+      this.logger.warn(
+        'GMAIL_USER + (GMAIL_APP_PASSWORD hoặc GMAIL_REFRESH_TOKEN) chưa cấu hình — bỏ qua gửi email phản hồi.',
+      );
       return;
     }
     this.logger.log(`>>> Bắt đầu gửi email tới ${to} (subject="${subject}")`);

@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/infrastructure/prisma/prisma.service';
 import { Escalation } from '../../domain/entities/escalation.entity';
-import { IEscalationRepository, ListEscalationsFilter } from '../../application/ports/escalation-repository.port';
+import {
+  IEscalationRepository,
+  ListEscalationsFilter,
+} from '../../application/ports/escalation-repository.port';
 import { EscalationMapper } from './escalation.mapper';
 
 @Injectable()

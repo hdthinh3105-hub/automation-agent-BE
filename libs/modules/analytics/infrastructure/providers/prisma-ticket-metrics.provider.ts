@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/infrastructure/prisma/prisma.service';
-import { ITicketMetricsProvider, DailyTicketMetrics } from '../../application/ports/ticket-metrics-provider.port';
+import {
+  ITicketMetricsProvider,
+  DailyTicketMetrics,
+} from '../../application/ports/ticket-metrics-provider.port';
 
 /**
  * TDD Mục 5.14 — tính chỉ số ticket theo ngày qua aggregation trực tiếp
@@ -16,14 +19,26 @@ export class PrismaTicketMetricsProvider implements ITicketMetricsProvider {
   async computeForDay(dayStart: Date, dayEnd: Date): Promise<DailyTicketMetrics> {
     const tickets = await this.prisma.ticket.findMany({
       where: { createdAt: { gte: dayStart, lt: dayEnd } },
-      select: { status: true, category: true, confidenceScore: true, createdAt: true, resolvedAt: true },
+      select: {
+        status: true,
+        category: true,
+        confidenceScore: true,
+        createdAt: true,
+        resolvedAt: true,
+      },
     });
 
     const totalTickets = tickets.length;
-    const autoResolvedCount = tickets.filter((t) => t.status === 'ANSWERED' || t.status === 'RESOLVED').length;
-    const escalatedCount = tickets.filter((t) => t.status === 'ESCALATED' || t.status === 'IN_PROGRESS').length;
+    const autoResolvedCount = tickets.filter(
+      (t) => t.status === 'ANSWERED' || t.status === 'RESOLVED',
+    ).length;
+    const escalatedCount = tickets.filter(
+      (t) => t.status === 'ESCALATED' || t.status === 'IN_PROGRESS',
+    ).length;
 
-    const confidences = tickets.map((t) => t.confidenceScore).filter((c): c is number => c !== null);
+    const confidences = tickets
+      .map((t) => t.confidenceScore)
+      .filter((c): c is number => c !== null);
     const avgConfidence =
       confidences.length > 0 ? confidences.reduce((a, b) => a + b, 0) / confidences.length : null;
 
@@ -41,6 +56,13 @@ export class PrismaTicketMetricsProvider implements ITicketMetricsProvider {
       byCategory[key] = (byCategory[key] ?? 0) + 1;
     }
 
-    return { totalTickets, autoResolvedCount, escalatedCount, avgConfidence, avgResponseTimeMs, byCategory };
+    return {
+      totalTickets,
+      autoResolvedCount,
+      escalatedCount,
+      avgConfidence,
+      avgResponseTimeMs,
+      byCategory,
+    };
   }
 }

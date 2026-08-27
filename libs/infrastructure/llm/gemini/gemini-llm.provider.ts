@@ -29,7 +29,10 @@ export class GeminiLlmProvider implements ILlmProvider {
     this.client = apiKey ? new GoogleGenerativeAI(apiKey) : null;
   }
 
-  async complete(messages: LlmMessage[], options?: LlmCompletionOptions): Promise<LlmCompletionResult> {
+  async complete(
+    messages: LlmMessage[],
+    options?: LlmCompletionOptions,
+  ): Promise<LlmCompletionResult> {
     if (!this.client) {
       throw new DomainException(ErrorCode.LLM_PROVIDER_ERROR, 'GEMINI_API_KEY is not configured', {
         provider: this.providerName,
@@ -41,7 +44,10 @@ export class GeminiLlmProvider implements ILlmProvider {
       const systemMessages = messages.filter((m) => m.role === 'system').map((m) => m.content);
       const conversational = messages.filter((m) => m.role !== 'system');
 
-      const prompt = [...systemMessages, ...conversational.map((m) => `${m.role}: ${m.content}`)].join('\n\n');
+      const prompt = [
+        ...systemMessages,
+        ...conversational.map((m) => `${m.role}: ${m.content}`),
+      ].join('\n\n');
 
       const result = await model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],

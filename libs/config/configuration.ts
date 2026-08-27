@@ -36,7 +36,10 @@ export const throttleConfig = registerAs('throttle', () => ({
 export const storageConfig = registerAs('storage', () => ({
   driver: process.env.STORAGE_DRIVER ?? 'local',
   localPath: process.env.STORAGE_LOCAL_PATH ?? './storage/documents',
-  maxUploadSizeBytes: parseInt(process.env.STORAGE_MAX_UPLOAD_SIZE_BYTES ?? `${10 * 1024 * 1024}`, 10),
+  maxUploadSizeBytes: parseInt(
+    process.env.STORAGE_MAX_UPLOAD_SIZE_BYTES ?? `${10 * 1024 * 1024}`,
+    10,
+  ),
 }));
 
 export const llmConfig = registerAs('llm', () => ({
@@ -53,7 +56,7 @@ export const llmConfig = registerAs('llm', () => ({
 
 export const embeddingConfig = registerAs('embedding', () => ({
   provider: process.env.EMBEDDING_PROVIDER ?? 'local',
-  model: process.env.EMBEDDING_MODEL ?? 'Xenova/bge-small-en-v1.5',
+  model: process.env.EMBEDDING_MODEL ?? 'Xenova/paraphrase-multilingual-MiniLM-L12-v2',
   dimensions: parseInt(process.env.EMBEDDING_DIMENSIONS ?? '384', 10),
 }));
 
@@ -63,7 +66,9 @@ export const ragConfig = registerAs('rag', () => ({
   topKRetrieval: parseInt(process.env.RAG_TOP_K_RETRIEVAL ?? '15', 10),
   topKFinal: parseInt(process.env.RAG_TOP_K_FINAL ?? '5', 10),
   embeddingBatchSize: parseInt(process.env.RAG_EMBEDDING_BATCH_SIZE ?? '16', 10),
-  confidenceEscalationThreshold: parseFloat(process.env.AI_CONFIDENCE_ESCALATION_THRESHOLD ?? '0.6'),
+  confidenceEscalationThreshold: parseFloat(
+    process.env.AI_CONFIDENCE_ESCALATION_THRESHOLD ?? '0.6',
+  ),
   spamScoreThreshold: parseFloat(process.env.SPAM_SCORE_THRESHOLD ?? '0.8'),
 }));
 
@@ -77,6 +82,7 @@ export const queueConfig = registerAs('queue', () => ({
 
 export const telegramConfig = registerAs('telegram', () => ({
   botToken: process.env.TELEGRAM_BOT_TOKEN || undefined,
+  pollingEnabled: (process.env.TELEGRAM_POLLING_ENABLED ?? 'false').toLowerCase() === 'true',
 }));
 
 export const emailConfig = registerAs('email', () => ({

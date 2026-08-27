@@ -32,8 +32,16 @@ export class ReRankingService {
 
     try {
       const scores = await this.scoreWithLlm(query, candidates);
+      // Blend điểm LLM (0-1) với vector similarity để giảm rủi ro LLM
+      // đánh giá lệch chunk về dưới ngưỡng trong khi mức tương đồng
+      // ngữ nghĩa/từ khoá vẫn cao (VD chunk 6.3 "Hoàn tiền trong 3-5
+      // ngày" với câu hỏi về hoàn tiền).
       return candidates
-        .map((candidate, index) => ({ candidate, score: scores[index] ?? 0 }))
+        .map((candidate, index) => {
+          const llmScore01 = (scores[index] ?? 0) / 10;
+          const vectorSimilarity = candidate.vectorSimilarity ?? 0;
+          return { candidate, score: 0.6 * llmScore01 + 0.4 * vectorSimilarity };
+        })
         .sort((a, b) => b.score - a.score)
         .slice(0, this.topKFinal)
         .map((item) => item.candidate);

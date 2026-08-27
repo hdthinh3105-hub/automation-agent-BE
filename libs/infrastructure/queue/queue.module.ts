@@ -38,9 +38,7 @@ import {
             port: configService.get<number>('queue.redisPort', 6379),
             password: configService.get<string>('queue.redisPassword'),
             maxRetriesPerRequest: null,
-            ...(configService.get<boolean>('queue.redisTls', false)
-              ? { tls: {} }
-              : {}),
+            ...(configService.get<boolean>('queue.redisTls', false) ? { tls: {} } : {}),
           },
         };
       },

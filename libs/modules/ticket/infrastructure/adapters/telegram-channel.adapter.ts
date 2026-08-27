@@ -35,7 +35,9 @@ export class TelegramChannelAdapter implements IChannelAdapter {
     }
     const chatId = message.chat.id;
     const fromName =
-      message.from?.username ?? message.from?.first_name ?? `telegram_user_${message.from?.id ?? chatId}`;
+      message.from?.username ??
+      message.from?.first_name ??
+      `telegram_user_${message.from?.id ?? chatId}`;
     const syntheticEmail = `telegram-${chatId}@telegram.local`;
 
     return {
@@ -52,7 +54,9 @@ export class TelegramChannelAdapter implements IChannelAdapter {
     // Port cũ nhận ticketId — không đủ để gửi Telegram (cần chatId).
     // Dùng sendMessage() bên dưới thay thế, gọi trực tiếp từ Controller
     // nơi đã có sẵn chatId từ command gốc.
-    this.logger.warn('sendReply(ticketId, content) không dùng cho Telegram — dùng sendMessage(chatId, content) thay thế.');
+    this.logger.warn(
+      'sendReply(ticketId, content) không dùng cho Telegram — dùng sendMessage(chatId, content) thay thế.',
+    );
   }
 
   /**

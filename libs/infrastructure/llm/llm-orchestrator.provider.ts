@@ -3,7 +3,12 @@ import { DomainException } from '@app/shared/exceptions/domain.exception';
 import { ErrorCode } from '@app/shared/exceptions/error-codes';
 import { GroqLlmProvider } from './groq/groq-llm.provider';
 import { GeminiLlmProvider } from './gemini/gemini-llm.provider';
-import { ILlmProvider, LlmCompletionOptions, LlmCompletionResult, LlmMessage } from './ports/llm-provider.port';
+import {
+  ILlmProvider,
+  LlmCompletionOptions,
+  LlmCompletionResult,
+  LlmMessage,
+} from './ports/llm-provider.port';
 
 /**
  * 🎯 `LlmOrchestratorService` (TDD Mục 5.7/15) — implement `ILlmProvider`
@@ -23,7 +28,10 @@ export class LlmOrchestratorProvider implements ILlmProvider {
     this.chain = [groq, gemini];
   }
 
-  async complete(messages: LlmMessage[], options?: LlmCompletionOptions): Promise<LlmCompletionResult> {
+  async complete(
+    messages: LlmMessage[],
+    options?: LlmCompletionOptions,
+  ): Promise<LlmCompletionResult> {
     return this.tryChain((provider) => provider.complete(messages, options));
   }
 
@@ -40,12 +48,18 @@ export class LlmOrchestratorProvider implements ILlmProvider {
         return await call(provider);
       } catch (error) {
         const message = (error as Error).message;
-        this.logger.warn(`Provider "${provider.providerName}" failed, trying next in chain: ${message}`);
+        this.logger.warn(
+          `Provider "${provider.providerName}" failed, trying next in chain: ${message}`,
+        );
         errors.push(`${provider.providerName}: ${message}`);
       }
     }
-    throw new DomainException(ErrorCode.LLM_PROVIDER_ERROR, 'All LLM providers in fallback chain failed', {
-      errors,
-    });
+    throw new DomainException(
+      ErrorCode.LLM_PROVIDER_ERROR,
+      'All LLM providers in fallback chain failed',
+      {
+        errors,
+      },
+    );
   }
 }

@@ -45,7 +45,9 @@ export class EmbeddingProcessor extends WorkerHost {
 
     try {
       const embeddedCount = await this.embedChunksUseCase.execute(documentId);
-      this.logger.log(`[job ${job.id}] Document "${documentId}" embedded (${embeddedCount} chunk(s)), status=READY.`);
+      this.logger.log(
+        `[job ${job.id}] Document "${documentId}" embedded (${embeddedCount} chunk(s)), status=READY.`,
+      );
       return { embeddedCount };
     } catch (error) {
       const maxAttempts = job.opts.attempts ?? 1;

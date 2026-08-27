@@ -20,9 +20,7 @@ const SIMILARITY_THRESHOLD = 0.6;
  */
 @Injectable()
 export class DuplicateDetectionService {
-  constructor(
-    @Inject(TICKET_REPOSITORY) private readonly ticketRepository: ITicketRepository,
-  ) {}
+  constructor(@Inject(TICKET_REPOSITORY) private readonly ticketRepository: ITicketRepository) {}
 
   async detect(
     ticketId: string,
@@ -30,7 +28,11 @@ export class DuplicateDetectionService {
     content: string,
   ): Promise<DuplicateDetectionResult> {
     const sinceDate = new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
-    const recentTickets = await this.ticketRepository.findRecentByCustomer(customerId, sinceDate, ticketId);
+    const recentTickets = await this.ticketRepository.findRecentByCustomer(
+      customerId,
+      sinceDate,
+      ticketId,
+    );
     if (recentTickets.length === 0) {
       return { isDuplicate: false, duplicateOfTicketId: null };
     }
@@ -43,7 +45,10 @@ export class DuplicateDetectionService {
       const firstCustomerMessage = messages.find((m) => m.sender === MessageSender.CUSTOMER);
       if (!firstCustomerMessage) continue;
 
-      const similarity = this.jaccardSimilarity(currentWords, this.tokenize(firstCustomerMessage.content));
+      const similarity = this.jaccardSimilarity(
+        currentWords,
+        this.tokenize(firstCustomerMessage.content),
+      );
       if (similarity >= SIMILARITY_THRESHOLD && (!bestMatch || similarity > bestMatch.similarity)) {
         bestMatch = { ticket: candidate, similarity };
       }

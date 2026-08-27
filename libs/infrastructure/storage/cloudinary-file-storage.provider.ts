@@ -54,7 +54,9 @@ export class CloudinaryFileStorage implements IFileStorage {
     try {
       await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
     } catch (error) {
-      this.logger.warn(`Xoá file Cloudinary thất bại (không chặn luồng chính): ${(error as Error).message}`);
+      this.logger.warn(
+        `Xoá file Cloudinary thất bại (không chặn luồng chính): ${(error as Error).message}`,
+      );
     }
   }
 

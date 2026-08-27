@@ -37,7 +37,7 @@ export const envSchema = z.object({
   GEMINI_API_KEY: z.string().optional(),
   GEMINI_MODEL: z.string().default('gemini-flash-latest'),
   EMBEDDING_PROVIDER: z.enum(['local', 'gemini']).default('local'),
-  EMBEDDING_MODEL: z.string().default('Xenova/bge-small-en-v1.5'),
+  EMBEDDING_MODEL: z.string().default('Xenova/paraphrase-multilingual-MiniLM-L12-v2'),
   EMBEDDING_DIMENSIONS: z.coerce.number().int().positive().default(384),
 
   CHUNK_SIZE_TOKENS: z.coerce.number().int().positive().default(500),
@@ -56,6 +56,7 @@ export const envSchema = z.object({
   SMTP_FROM: z.string().optional(),
 
   TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_POLLING_ENABLED: z.coerce.boolean().default(false),
 
   // ---- Gmail channel (Ngày 4 + Đợt 2) ----
   GMAIL_USER: z.string().optional(),
@@ -68,7 +69,7 @@ export const envSchema = z.object({
   GMAIL_REFRESH_TOKEN: z.string().optional(),
   EMAIL_POLLING_ENABLED: z.coerce.boolean().default(false),
 
-    // ---- Notification Module (Ngày 5) ----
+  // ---- Notification Module (Ngày 5) ----
   ADMIN_NOTIFICATION_EMAIL: z.string().optional(),
 
   STORAGE_DRIVER: z.string().optional(),

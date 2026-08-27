@@ -1,7 +1,10 @@
 import { Module } from '@nestjs/common';
 import { NOTIFICATION_LOG_REPOSITORY } from './application/ports/notification-log-repository.port';
 import { PrismaNotificationLogRepository } from './infrastructure/repositories/prisma-notification-log.repository';
-import { EMAIL_SENDER, NodemailerEmailSender } from './infrastructure/email/nodemailer-email.provider';
+import {
+  EMAIL_SENDER,
+  NodemailerEmailSender,
+} from './infrastructure/email/nodemailer-email.provider';
 import { NotificationDispatcherService } from './application/services/notification-dispatcher.service';
 import { SendNotificationUseCase } from './application/use-cases/send-notification.use-case';
 import { EscalationNotificationListener } from './application/listeners/escalation-notification.listener';

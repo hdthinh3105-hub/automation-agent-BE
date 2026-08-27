@@ -17,7 +17,8 @@ export class NotificationProcessor extends WorkerHost {
   private readonly logger = new Logger(NotificationProcessor.name);
 
   constructor(
-    @Inject(NOTIFICATION_LOG_REPOSITORY) private readonly notificationLogRepository: INotificationLogRepository,
+    @Inject(NOTIFICATION_LOG_REPOSITORY)
+    private readonly notificationLogRepository: INotificationLogRepository,
     private readonly dispatcher: NotificationDispatcherService,
   ) {
     super();

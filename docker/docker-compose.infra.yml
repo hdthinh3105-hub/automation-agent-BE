@@ -1,9 +1,7 @@
 version: "3.9"
 
-# Phase 1+2 scope: Postgres (with pgvector extension available) + Redis.
-# API/Worker containers are commented out for now — in Phase 1 we run
-# `npm run start:dev` locally against these two services. Dockerfiles for
-# api/worker will be added when Phase 11 (Deployment) is implemented.
+# Chỉ chạy Postgres + Redis cho dev local.
+# API/Worker chạy bằng npm run start:dev
 
 services:
   postgres:

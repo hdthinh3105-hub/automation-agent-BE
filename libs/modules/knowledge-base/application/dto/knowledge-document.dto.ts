@@ -8,7 +8,9 @@ export class UploadDocumentDto {
 
   @IsOptional()
   @IsArray()
-  @Transform(({ value }) => (typeof value === 'string' ? value.split(',').map((t) => t.trim()) : value))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.split(',').map((t) => t.trim()) : value,
+  )
   tags?: string[];
 }
 

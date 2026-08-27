@@ -65,8 +65,12 @@ export class PrismaDashboardReadRepository implements IDashboardReadRepository {
       this.prisma.ticket.aggregate({ _avg: { confidenceScore: true } }),
     ]);
     const total = tickets.length || 1;
-    const autoResolved = tickets.filter((t) => t.status === 'ANSWERED' || t.status === 'RESOLVED').length;
-    const escalated = tickets.filter((t) => t.status === 'ESCALATED' || t.status === 'IN_PROGRESS').length;
+    const autoResolved = tickets.filter(
+      (t) => t.status === 'ANSWERED' || t.status === 'RESOLVED',
+    ).length;
+    const escalated = tickets.filter(
+      (t) => t.status === 'ESCALATED' || t.status === 'IN_PROGRESS',
+    ).length;
 
     return {
       avgConfidence: confidenceAgg._avg.confidenceScore,

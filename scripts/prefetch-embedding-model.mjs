@@ -1,6 +1,6 @@
 import { pipeline, env } from '@xenova/transformers';
 
-const model = process.env.EMBEDDING_MODEL ?? 'Xenova/bge-small-en-v1.5';
+const model = process.env.EMBEDDING_MODEL ?? 'Xenova/paraphrase-multilingual-MiniLM-L12-v2';
 env.cacheDir = './.transformers-cache';
 
 console.log(`Prefetching embedding model "${model}"...`);

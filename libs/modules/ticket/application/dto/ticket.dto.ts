@@ -26,7 +26,16 @@ export class AddCustomerMessageDto {
 
 export class UpdateTicketStatusDto {
   @IsString()
-  @IsIn(['NEW', 'CLASSIFIED', 'WAITING_CUSTOMER', 'ANSWERED', 'ESCALATED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'])
+  @IsIn([
+    'NEW',
+    'CLASSIFIED',
+    'WAITING_CUSTOMER',
+    'ANSWERED',
+    'ESCALATED',
+    'IN_PROGRESS',
+    'RESOLVED',
+    'CLOSED',
+  ])
   status!: string;
 
   @IsOptional()

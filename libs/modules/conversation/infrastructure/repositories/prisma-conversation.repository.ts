@@ -19,7 +19,11 @@ export class PrismaConversationRepository implements IConversationRepository {
     await this.prisma.conversation.upsert({
       where: { id: data.id },
       create: data,
-      update: { summary: data.summary, turnCount: data.turnCount, lastActivityAt: data.lastActivityAt },
+      update: {
+        summary: data.summary,
+        turnCount: data.turnCount,
+        lastActivityAt: data.lastActivityAt,
+      },
     });
   }
 

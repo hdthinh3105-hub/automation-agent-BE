@@ -33,7 +33,11 @@ Quy tắc BẮT BUỘC:
  */
 @Injectable()
 export class PromptBuilderService {
-  build(query: string, chunks: HybridSearchResult[], conversationHistory: LlmMessage[] = []): BuiltPrompt {
+  build(
+    query: string,
+    chunks: HybridSearchResult[],
+    conversationHistory: LlmMessage[] = [],
+  ): BuiltPrompt {
     const citations: CitationEntry[] = chunks.map((result, i) => ({
       index: i + 1,
       chunkId: result.chunk.id,

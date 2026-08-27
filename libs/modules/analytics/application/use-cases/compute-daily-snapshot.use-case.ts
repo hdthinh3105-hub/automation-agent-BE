@@ -1,6 +1,12 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { TICKET_METRICS_PROVIDER, ITicketMetricsProvider } from '../ports/ticket-metrics-provider.port';
-import { METRIC_SNAPSHOT_REPOSITORY, IMetricSnapshotRepository } from '../ports/metric-snapshot-repository.port';
+import {
+  TICKET_METRICS_PROVIDER,
+  ITicketMetricsProvider,
+} from '../ports/ticket-metrics-provider.port';
+import {
+  METRIC_SNAPSHOT_REPOSITORY,
+  IMetricSnapshotRepository,
+} from '../ports/metric-snapshot-repository.port';
 import { DailyMetricSnapshot } from '../../domain/entities/daily-metric-snapshot.entity';
 
 /**
@@ -14,7 +20,8 @@ export class ComputeDailySnapshotUseCase {
 
   constructor(
     @Inject(TICKET_METRICS_PROVIDER) private readonly ticketMetricsProvider: ITicketMetricsProvider,
-    @Inject(METRIC_SNAPSHOT_REPOSITORY) private readonly metricSnapshotRepository: IMetricSnapshotRepository,
+    @Inject(METRIC_SNAPSHOT_REPOSITORY)
+    private readonly metricSnapshotRepository: IMetricSnapshotRepository,
   ) {}
 
   /** @param targetDate mặc định là "hôm qua" nếu không truyền. */
@@ -34,7 +41,9 @@ export class ComputeDailySnapshotUseCase {
       byCategory: metrics.byCategory,
     });
     await this.metricSnapshotRepository.upsert(snapshot);
-    this.logger.log(`Snapshot cho ngày ${dayStart.toISOString().slice(0, 10)}: ${metrics.totalTickets} ticket(s).`);
+    this.logger.log(
+      `Snapshot cho ngày ${dayStart.toISOString().slice(0, 10)}: ${metrics.totalTickets} ticket(s).`,
+    );
   }
 
   private startOfDay(date: Date): Date {

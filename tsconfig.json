@@ -54,7 +54,11 @@
       "@app/modules/monitoring": ["libs/modules/monitoring/index.ts"],
       "@app/modules/monitoring/*": ["libs/modules/monitoring/*"],
       "@app/modules/analytics": ["libs/modules/analytics/index.ts"],
-      "@app/modules/analytics/*": ["libs/modules/analytics/*"]
+      "@app/modules/analytics/*": ["libs/modules/analytics/*"],
+      "@app/modules/admin": ["libs/modules/admin/index.ts"],
+      "@app/modules/admin/*": ["libs/modules/admin/*"],
+      "@app/modules/settings": ["libs/modules/settings/index.ts"],
+      "@app/modules/settings/*": ["libs/modules/settings/*"]
     }
   }
 }

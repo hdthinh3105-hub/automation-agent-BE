@@ -1,7 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EMBEDDING_PROVIDER, IEmbeddingProvider } from '@app/infrastructure';
-import { CHUNK_REPOSITORY, IChunkRepository, ChunkSearchResult } from '../ports/chunk-repository.port';
+import {
+  CHUNK_REPOSITORY,
+  IChunkRepository,
+  ChunkSearchResult,
+} from '../ports/chunk-repository.port';
 
 export interface HybridSearchResult extends ChunkSearchResult {
   /** Điểm RRF sau khi hợp nhất 2 nguồn tín hiệu — dùng để sắp xếp/re-rank. */

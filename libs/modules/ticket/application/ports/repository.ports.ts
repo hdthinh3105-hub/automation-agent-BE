@@ -25,7 +25,11 @@ export interface ITicketRepository {
    * rộng toàn hệ thống nếu cần" (Đợt Ngày 4 chỉ implement phạm vi cùng
    * customer, chưa mở rộng toàn hệ thống — giới hạn đã biết).
    */
-  findRecentByCustomer(customerId: string, sinceDate: Date, excludeTicketId: string): Promise<Ticket[]>;
+  findRecentByCustomer(
+    customerId: string,
+    sinceDate: Date,
+    excludeTicketId: string,
+  ): Promise<Ticket[]>;
 }
 
 export interface ListTicketsFilter {
@@ -77,9 +81,7 @@ export interface TicketTimelineEntry {
  * TDD Mục 2.5, 5.3).
  */
 export interface ITicketReadRepository {
-  listTickets(
-    filter: ListTicketsFilter,
-  ): Promise<{ items: TicketListItem[]; totalItems: number }>;
+  listTickets(filter: ListTicketsFilter): Promise<{ items: TicketListItem[]; totalItems: number }>;
   getTicketDetail(id: string): Promise<TicketDetail | null>;
   getTicketTimeline(id: string): Promise<TicketTimelineEntry[]>;
 }

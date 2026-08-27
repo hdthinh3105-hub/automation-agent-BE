@@ -16,7 +16,10 @@
     "prefetch:model": "node scripts/prefetch-embedding-model.mjs",
     "start:worker:prod": "node dist/apps/worker/worker.main",
     "lint": "eslint \"{apps,libs}/**/*.ts\" --fix",
+    "lint:ci": "eslint \"{apps,libs}/**/*.ts\" --max-warnings 0",
+    "typecheck": "tsc --noEmit",
     "test": "jest",
+    "test:ci": "jest --ci --runInBand --coverage --coverageReporters=text-summary lcov",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "prisma:generate": "prisma generate --schema=prisma/schema.prisma",
@@ -123,7 +126,17 @@
       "^@app/modules/ticket(|/.*)$": "<rootDir>/libs/modules/ticket/$1",
       "^@app/modules/conversation(|/.*)$": "<rootDir>/libs/modules/conversation/$1",
       "^@app/modules/knowledge-base(|/.*)$": "<rootDir>/libs/modules/knowledge-base/$1",
-      "^@app/modules/rag(|/.*)$": "<rootDir>/libs/modules/rag/$1"
+      "^@app/modules/rag(|/.*)$": "<rootDir>/libs/modules/rag/$1",
+      "^@app/modules/ai(|/.*)$": "<rootDir>/libs/modules/ai/$1",
+      "^@app/modules/routing(|/.*)$": "<rootDir>/libs/modules/routing/$1",
+      "^@app/modules/escalation(|/.*)$": "<rootDir>/libs/modules/escalation/$1",
+      "^@app/modules/notification(|/.*)$": "<rootDir>/libs/modules/notification/$1",
+      "^@app/modules/audit(|/.*)$": "<rootDir>/libs/modules/audit/$1",
+      "^@app/modules/dashboard(|/.*)$": "<rootDir>/libs/modules/dashboard/$1",
+      "^@app/modules/monitoring(|/.*)$": "<rootDir>/libs/modules/monitoring/$1",
+      "^@app/modules/analytics(|/.*)$": "<rootDir>/libs/modules/analytics/$1",
+      "^@app/modules/admin(|/.*)$": "<rootDir>/libs/modules/admin/$1",
+      "^@app/modules/settings(|/.*)$": "<rootDir>/libs/modules/settings/$1"
     }
   }
 }

@@ -28,7 +28,9 @@ export class NodemailerEmailSender implements IEmailSender {
     const from = this.configService.get<string>('notification.smtpFrom') ?? user;
 
     if (!host || !user || !pass) {
-      this.logger.warn('SMTP_HOST/SMTP_USER/SMTP_PASS chưa cấu hình đủ — bỏ qua gửi notification email.');
+      this.logger.warn(
+        'SMTP_HOST/SMTP_USER/SMTP_PASS chưa cấu hình đủ — bỏ qua gửi notification email.',
+      );
       return;
     }
 
