@@ -12,9 +12,21 @@ jobs:
 
     steps:
       - name: Deploy API
-        if: ${{ secrets.RENDER_DEPLOY_HOOK_API != '' }}
-        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_API }}"
+        env:
+          RENDER_DEPLOY_HOOK_API: ${{ secrets.RENDER_DEPLOY_HOOK_API }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_API" ]; then
+            echo "RENDER_DEPLOY_HOOK_API chua cau hinh - skip deploy API"
+            exit 0
+          fi
+          curl -X POST "$RENDER_DEPLOY_HOOK_API"
 
       - name: Deploy Worker
-        if: ${{ secrets.RENDER_DEPLOY_HOOK_WORKER != '' }}
-        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_WORKER }}"
+        env:
+          RENDER_DEPLOY_HOOK_WORKER: ${{ secrets.RENDER_DEPLOY_HOOK_WORKER }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_WORKER" ]; then
+            echo "RENDER_DEPLOY_HOOK_WORKER chua cau hinh - skip deploy Worker"
+            exit 0
+          fi
+          curl -X POST "$RENDER_DEPLOY_HOOK_WORKER"
