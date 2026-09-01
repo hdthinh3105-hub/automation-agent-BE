@@ -4,6 +4,9 @@
   "description": "Track D - AI Customer Support Automation System",
   "private": true,
   "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "nest build api",
     "build:worker": "nest build worker",
