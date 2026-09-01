@@ -1,0 +1,106 @@
+# Docker Compose cho Backend (API + Worker + Postgres + Redis) chạy local.
+# Mỗi service đọc biến env từ file .env (optional) + các giá trị mặc định bên dưới.
+#
+# Cách dùng:
+#   1. cp .env.example .env   rồi điền các secret (JWT, GROQ, GEMINI, ...)
+#   2. docker compose up --build
+#   - API    -> http://localhost:3000/api
+#   - Redis  -> localhost:6379, Postgres -> localhost:5432
+#
+# Lưu ý: Dockerfile API CMD tự chạy `prisma migrate deploy` trước khi khởi động,
+# nên lần đầu sẽ tự tạo schema. Postgres dùng image pgvector (cần cho RAG).
+
+services:
+  postgres:
+    image: ankane/pgvector:v0.5.1
+    container_name: acs-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ai_customer_support
+    ports:
+      - "5432:5432"
+    volumes:
+      - acs-postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init-extensions.sql:/docker-entrypoint-initdb.d/init-extensions.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: acs-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - acs-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: acs-api
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ai_customer_support?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_TLS: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - acs-storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: acs-worker
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ai_customer_support?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_TLS: "false"
+    volumes:
+      - acs-storage:/app/storage
+      - acs-transformers-cache:/app/.transformers-cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  acs-postgres-data:
+  acs-redis-data:
+  acs-storage:
+  acs-transformers-cache:

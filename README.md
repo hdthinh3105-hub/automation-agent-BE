@@ -241,15 +241,52 @@ Chi tiết lý do tổ chức từng thư mục xem Mục 6 của `TDD-Track-D-A
 
 ## Cài đặt & Chạy thử
 
+### Chạy nhanh bằng Docker (30 giây)
+
+Cách nhanh nhất để chạy toàn bộ backend (Postgres + pgvector + Redis + API + Worker) chỉ với Docker — không cần cài Node.js trên máy:
+
+```bash
+git clone <repo-url> be
+cd be
+
+cp .env.example .env
+# → điền ít nhất JWT_ACCESS_SECRET / JWT_REFRESH_SECRET (chuỗi ngẫu nhiên ≥32 ký tự, vd: openssl rand -base64 48)
+# → điền GROQ_API_KEY / GEMINI_API_KEY nếu muốn chạy AI pipeline thật
+
+docker compose up -d --build
+
+# Chạy migration + seed (gắn tạm package.json/tsconfig.json từ host để ts-node chạy được trong container)
+docker compose run --rm \
+  -v "$PWD/package.json:/app/package.json:ro" \
+  -v "$PWD/tsconfig.json:/app/tsconfig.json:ro" \
+  api sh -c "npx prisma migrate deploy && npx ts-node --transpile-only prisma/seed.ts"
+```
+
+Kiểm tra:
+```bash
+curl http://localhost:3000/api/health     # → {"status":"ok"}
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"ChangeMe123!"}'
+```
+
+> **Các port khi chạy Docker:** API ở `3000`, Postgres ở `5432`, Redis ở `6379`, Worker không expose port bên ngoài (chỉ nội bộ network của compose).
+
+> **Seed chạy 1 lần duy nhất** để tạo tài khoản admin `admin@example.com` / `ChangeMe123!` (đổi mật khẩu sau lần đăng nhập đầu — xem bảng tài khoản dưới đây). Không chạy seed trong `docker compose up` để tránh trùng dữ liệu mỗi lần khởi động.
+
+| Tài khoản | Vai trò | Mô tả |
+|---|---|---|
+| `admin@example.com` / `ChangeMe123!` | ADMIN | Toàn quyền: dashboard, KB, settings, xem AI performance |
+
 ### Yêu cầu
-- Node.js ≥ 20
+- Node.js ≥ 20 (nếu chạy dev thay vì Docker)
 - Docker Desktop (chạy Postgres + Redis local)
 - API key free: [Groq](https://console.groq.com), [Google AI Studio](https://aistudio.google.com) (Gemini fallback + embedding tuỳ chọn)
 
 ### Chạy local (dev)
 ```bash
-git clone <repo-url> automation-agent
-cd automation-agent
+git clone <repo-url> be
+cd be
 npm install
 
 cp .env.example .env
@@ -264,7 +301,9 @@ npm run start:dev               # API tại http://localhost:3000/api
 npm run start:worker:dev        # Worker process (queue: document-parser, embedding, email, notification)
 ```
 
-> **Docker đầy đủ:** nếu dùng toàn bộ stack (Postgres+Redis+API+Worker+Frontend) chạy từ workspace root, dùng `docker compose up -d --build` ở repo gốc (xem mục [CI/CD](#cicd--docker)). Muốn chỉ cài hạ tầng Postgres/Redis local: `docker compose -f docker/docker-compose.infra.yml up -d`.
+> **Chỉ cài hạ tầng Postgres/Redis local** (không chạy API/Worker qua Docker): `docker compose up -d postgres redis`.
+
+> **Frontend đi kèm**: dashboard Next.js nằm ở repo riêng `automation-agent-FE` (xem README project đó) — chạy độc lập với backend này, kết nối qua `NEXT_PUBLIC_API_BASE_URL`.
 
 ### Thử nhanh bằng curl hoặc postman ( link postman https://go.postman.co/workspace/8f65c004-6c33-45cb-8e29-6e5558d375be Nếu sài Postman bằng link nhớ phải vào thêm vào Enviroment URL: base_url: http://localhost:3000 , url_main: https://automation-agent-fhbl.onrender.com )
 ```bash
