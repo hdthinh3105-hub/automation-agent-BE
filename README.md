@@ -246,7 +246,7 @@ Chi tiết lý do tổ chức từng thư mục xem Mục 6 của `TDD-Track-D-A
 Cách nhanh nhất để chạy toàn bộ backend (Postgres + pgvector + Redis + API + Worker) chỉ với Docker — không cần cài Node.js trên máy:
 
 ```bash
-git clone <repo-url> be
+git clone https://github.com/hdthinh3105-hub/automation-agent-BE.git be
 cd be
 
 cp .env.example .env
@@ -285,7 +285,7 @@ curl -X POST http://localhost:3000/api/auth/login \
 
 ### Chạy local (dev)
 ```bash
-git clone <repo-url> be
+git clone https://github.com/hdthinh3105-hub/automation-agent-BE.git be
 cd be
 npm install
 
