@@ -29,7 +29,8 @@
     "prisma:migrate:dev": "prisma migrate dev --schema=prisma/schema.prisma",
     "prisma:migrate:deploy": "prisma migrate deploy --schema=prisma/schema.prisma",
     "prisma:studio": "prisma studio --schema=prisma/schema.prisma",
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node prisma/seed.ts",
+    "reindex:embeddings": "node scripts/reindex-embeddings.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
