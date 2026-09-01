@@ -24,7 +24,10 @@ import {
  * Upstash) chuyển từ `QueueModule.registerQueue({ settings })` sang đây vì
  * trong BullMQ đây là option của Worker, không phải của Queue.
  */
-@Processor(EMBEDDING_QUEUE, { drainDelay: 30, stalledInterval: 120_000 })
+// `lockDuration` nâng lên 10 phút: embed nhiều chunk qua Gemini (mỗi chunk
+// 1 HTTP request) dễ vượt lock mặc định 30s của BullMQ -> nếu không nâng sẽ
+// dính lỗi "Missing lock for job" (worker mất quyền hoàn tất job giữa chừng).
+@Processor(EMBEDDING_QUEUE, { drainDelay: 30, stalledInterval: 120_000, lockDuration: 600_000 })
 export class EmbeddingProcessor extends WorkerHost {
   private readonly logger = new Logger(EmbeddingProcessor.name);
 

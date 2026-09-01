@@ -30,7 +30,9 @@ import {
  * Upstash) chuyển từ `QueueModule.registerQueue({ settings })` sang đây vì
  * trong BullMQ đây là option của Worker, không phải của Queue.
  */
-@Processor(DOCUMENT_PARSER_QUEUE, { drainDelay: 30, stalledInterval: 120_000 })
+// `lockDuration` nâng lên 5 phút: parse tài liệu (download remote + extract
+// text + chunk) có thể lâu hơn lock mặc định 30s -> tránh "Missing lock for job".
+@Processor(DOCUMENT_PARSER_QUEUE, { drainDelay: 30, stalledInterval: 120_000, lockDuration: 300_000 })
 export class DocumentParserProcessor extends WorkerHost {
   private readonly logger = new Logger(DocumentParserProcessor.name);
 
