@@ -3,8 +3,8 @@
 
 **Link Postman: https://www.postman.com/hdthinh3105/workspace/automationagent**
 
-[![CI](https://github.com/hdthinh3105-hub/automation-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/hdthinh3105-hub/automation-agent/actions/workflows/ci.yml)
-[![Docker (GHCR)](https://img.shields.io/badge/Docker-GHCR-2496ed?logo=docker&logoColor=white)](https://github.com/hdthinh3105-hub/automation-agent/pkgs/container/automation-agent)
+[![CI](https://github.com/hdthinh3105-hub/automation-agent-BE/actions/workflows/ci.yml/badge.svg)](https://github.com/hdthinh3105-hub/automation-agent-BE/actions/workflows/ci.yml)
+[![Deploy Render](https://img.shields.io/badge/Deploy-Render-46e3b7?logo=render&logoColor=white)](https://dashboard.render.com)
 [![Node](https://img.shields.io/badge/Node-%3E%3D%2020-339933?logo=node.js&logoColor=white)]()
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)]()
 [![NestJS](https://img.shields.io/badge/NestJS-10-E0234E?logo=nestjs&logoColor=white)]()
@@ -27,6 +27,7 @@ Backend API cho hệ thống Automation/Agent tiếp nhận yêu cầu từ **nh
 - [Gửi email qua Gmail REST API (thay SMTP)](#gửi-email-qua-gmail-rest-api-thay-smtp)
 - [Testing](#testing)
 - [CI/CD & Docker](#cicd--docker)
+- [Deploy lên Render](#deploy-lên-render)
 - [Monitoring](#monitoring)
 - [Giới hạn đã biết](#giới-hạn-đã-biết)
 - [Tài liệu liên quan](#tài-liệu-liên-quan)
@@ -391,17 +392,58 @@ GitHub Actions tự chạy mỗi lần push/PR vào `main`/`develop` (xem `.gith
 | `typecheck` | `npm run typecheck` | TypeScript strict, đảm bảo không lọt type lỗi |
 | `test` | `npm run test:ci` | Jest + coverage, upload artifact report |
 | `build` | `npm run build` + `npm run build:worker` | Build Nest API + Worker, smoke-build Docker image |
-| `publish-docker` | Docker Buildx | Merge vào `main`: build & push `ghcr.io/<owner>/automation-agent` + `automation-agent-worker` (tag `sha-*` + `latest`) |
 
-Router ví dụ khi chạy full stack Docker từ workspace root:
-
-```
-Docker Compose: postgres (pgvector) + redis + api :3000 + worker + frontend :3001
-```
+> CI chỉ **chạy kiểm tra** (không publish ảnh). Deploy production thực hiện qua **Render Deploy Hook** (xem mục [Deploy lên Render](#deploy-lên-render)) — không còn push GHCR.
 
 Dependabot tự động gộp cập nhật theo nhóm (nestjs/prisma/typescript/eslint..., Docker base image, GitHub Actions) — thứ 7 hằng tuần, xem `.github/dependabot.yml`.
 
 Muốn cập nhật dependency có chủ đích: để Dependabot tạo PR (nhóm nhỏ), build thử qua CI là gate an toàn trước khi merge.
+
+---
+
+## Deploy lên Render
+
+Backend deploy production lên **Render** (API + Worker) qua **Deploy Hooks** — push vào `main` sẽ tự trigger redeploy. Không cần GHCR: Render build trực tiếp từ repo qua `Dockerfile` / `Dockerfile.worker`.
+
+### Chuẩn bị 1 lần (Render Dashboard)
+
+1. **API Service**: tạo **Web Service** → connect repo `automation-agent-BE` → branch `main` → **Root Directory** để trống → **Runtime** Docker → **Dockerfile** = `Dockerfile` (API).
+2. **Worker Service**: tạo **Web Service** (self-host / Render) → cùng repo → **Dockerfile** = `Dockerfile.worker` (Worker chỉ để pass health-check `/` củ Render, không phục vụ nghiệp vụ — xem `apps/worker/src/worker.main.ts`).
+3. **Database**: dùng **Render PostgreSQL** (có bật extension `vector` + `pg_trgm`) hoặc Postgres ngoài; lấy `DATABASE_URL`.
+4. Lần đầu: Render auto-chạy migration không đảm bảo — nên chạy migration + seed thủ công (xem bước seed dưới).
+
+### Cấu hình biến môi trường (Render → Environment)
+
+Trên **cả 2 service** (API + Worker), copy các biến từ `.env.example` sang Render, chỉnh giá trị cho production. Bắt buộc tối thiểu:
+- `DATABASE_URL` — Postgres Render.
+- `REDIS_HOST` + `REDIS_PORT` (dùng Redis ngoài, vd [Upstash](https://upstash.com)/[Redis Cloud](https://redis.com)) — **không dùng Redis local khi deploy**.
+- `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` — chuỗi ≥32 ký tự, khác nhau.
+- `GROQ_API_KEY`, `GEMINI_API_KEY` — LLM.
+- `CORS_ORIGIN` — domain FE trên Vercel (`https://<your-fe>.vercel.app`).
+- Các biến kênh: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_POLLING_ENABLED` (đặt `false` khi có URL public → dùng webhook), bộ Gmail, `CLOUDINARY_*`...
+
+### Bật GitHub Actions deploy hook
+
+`be/.github/workflows/deploy.yml` sẽ gọi **Deploy Hook URL** của Render mỗi lần push `main`. Thêm vào **GitHub repo → Settings → Secrets → Actions**:
+
+| Secret | Lấy từ |
+|---|---|
+| `RENDER_DEPLOY_HOOK_API` | Render → API Service → Settings → **Deploy Hook** → copy URL |
+| `RENDER_DEPLOY_HOOK_WORKER` | Render → Worker Service → Settings → Deploy Hook → copy URL |
+
+> Nếu chưa set secret, workflow tự **skip** (không fail) — push vẫn chạy CI bình thường.
+
+### Migration + seed lần đầu (trên production)
+
+```bash
+# run một lần từ local trỏ DATABASE_URL production, hoặc dùng Render Shell:
+npx prisma migrate deploy
+npx prisma generate
+# tạo admin tài khoản (an toàn: revert sau khi chạy):
+npx ts-node --transpile-only prisma/seed.ts
+```
+
+Kiểm tra: `https://<your-api>.onrender.com/api/health` → `{"status":"ok"}`; login `admin@example.com` / `ChangeMe123!`.
 
 ---
 
