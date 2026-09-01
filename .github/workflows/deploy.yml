@@ -11,22 +11,13 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Deploy API
+      - name: Deploy API + Worker (merged single service)
         env:
           RENDER_DEPLOY_HOOK_API: ${{ secrets.RENDER_DEPLOY_HOOK_API }}
         run: |
           if [ -z "$RENDER_DEPLOY_HOOK_API" ]; then
-            echo "RENDER_DEPLOY_HOOK_API chua cau hinh - skip deploy API"
+            echo "RENDER_DEPLOY_HOOK_API chua cau hinh - skip deploy"
             exit 0
           fi
           curl -X POST "$RENDER_DEPLOY_HOOK_API"
-
-      - name: Deploy Worker
-        env:
-          RENDER_DEPLOY_HOOK_WORKER: ${{ secrets.RENDER_DEPLOY_HOOK_WORKER }}
-        run: |
-          if [ -z "$RENDER_DEPLOY_HOOK_WORKER" ]; then
-            echo "RENDER_DEPLOY_HOOK_WORKER chua cau hinh - skip deploy Worker"
-            exit 0
-          fi
-          curl -X POST "$RENDER_DEPLOY_HOOK_WORKER"
+          echo "Merged service deployed (API+Worker in one container). Xoa service worker cu tren Render dashboard de tiet kiem 750h."

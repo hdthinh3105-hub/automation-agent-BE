@@ -50,6 +50,9 @@ services:
       dockerfile: Dockerfile
     container_name: acs-api
     restart: unless-stopped
+    # Local dev: chạy riêng API (worker chạy ở service `worker` riêng để log tách bạch).
+    # Production Render gộp 1 service: để Dockerfile CMD mặc định (merged) chạy cả API+Worker.
+    command: sh -c "npx prisma migrate deploy --schema=prisma/schema.prisma && node dist/apps/api/main"
     env_file:
       - path: .env
         required: false
