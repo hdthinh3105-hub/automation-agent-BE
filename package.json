@@ -8,8 +8,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "nest build api",
-    "build:worker": "nest build worker",
+    "build": "prisma generate --schema=prisma/schema.prisma && nest build api",
+    "build:worker": "prisma generate --schema=prisma/schema.prisma && nest build worker",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "start": "nest start api",
     "start:dev": "nest start api --watch",
