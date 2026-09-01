@@ -5,16 +5,19 @@
  */
 import { spawn } from 'child_process';
 
+console.log('[merged] starting API (PORT=' + (process.env.PORT ?? '3000') + ') + Worker (WORKER_PORT=' + (process.env.WORKER_PORT ?? '3001') + ')');
 const api = spawn('node', ['dist/apps/api/main'], {
   stdio: 'inherit',
   env: process.env,
 });
+console.log('[merged] api spawned pid', api.pid);
 
 const workerEnv = { ...process.env, WORKER_PORT: process.env.WORKER_PORT ?? '3001' };
 const worker = spawn('node', ['dist/apps/worker/worker.main'], {
   stdio: 'inherit',
   env: workerEnv,
 });
+console.log('[merged] worker spawned pid', worker.pid);
 
 function shutdown(signal) {
   console.log(`[merged] received ${signal}, shutting down...`);
