@@ -135,3 +135,24 @@ jobs:
           tags: automation-agent-worker:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # ─── Deploy: chỉ chạy khi CI pass và push lên main (gộp CD vào CI để không deploy code hỏng) ───
+  deploy:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [lint, typecheck, test, build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+    steps:
+      - name: Deploy API+Worker (merged)
+        env:
+          RENDER_DEPLOY_HOOK_API: ${{ secrets.RENDER_DEPLOY_HOOK_API }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_API" ]; then
+            echo "RENDER_DEPLOY_HOOK_API chua cau hinh - skip deploy"
+            exit 0
+          fi
+          curl -X POST "$RENDER_DEPLOY_HOOK_API"
+          echo "Deploy triggered for $GITHUB_SHA"

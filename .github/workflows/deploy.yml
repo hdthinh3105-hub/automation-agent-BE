@@ -1,12 +1,11 @@
-name: Deploy to Render
+name: Deploy to Render (deprecated - gop vao CI)
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
-    name: Deploy API & Worker
+    name: Deploy API & Worker (manual only)
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -20,4 +19,4 @@ jobs:
             exit 0
           fi
           curl -X POST "$RENDER_DEPLOY_HOOK_API"
-          echo "Merged service deployed (API+Worker in one container). Xoa service worker cu tren Render dashboard de tiet kiem 750h."
+          echo "Merged service deployed (API+Worker in one container)."
