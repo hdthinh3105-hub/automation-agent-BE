@@ -1,5 +1,5 @@
 # Automation Agent — Hệ thống Tự động hoá Hỗ trợ Khách hàng bằng AI
-**Link Demo: https://automation-agent-fhbl.onrender.com**
+**Link Demo: https://automation-agent-052r.onrender.com**
 
 **Link Postman: https://www.postman.com/hdthinh3105/workspace/automationagent**
 
@@ -57,8 +57,12 @@ Backend API cho hệ thống Automation/Agent tiếp nhận yêu cầu từ **nh
                                                         │
                                                         ▼
                                          ┌──────────────────────────────┐
-                                         │  apps/worker (process riêng, │
-                                         │  cùng codebase libs/)        │
+                                         │  Single Web Service (merged) │
+                                         │  apps/api + apps/worker      │
+                                         │  cùng codebase libs/ via     │
+                                         │  scripts/start-merged.mjs    │
+                                         │  API: $PORT (10000)          │
+                                         │  Worker: $WORKER_PORT (3001) │
                                          │  Document Parser / Embedding │
                                          │  / Email / Notification /    │
                                          │  Analytics cron / SLA Watcher│
@@ -67,15 +71,15 @@ Backend API cho hệ thống Automation/Agent tiếp nhận yêu cầu từ **nh
                           ┌──────────────────────────┼─────────────────────────┐
                           ▼                          ▼                         ▼
                  ┌─────────────────┐      ┌────────────────────┐      ┌────────────────────┐
-                 │ Groq / Gemini   │      │ Local Embedding    │      │ Cloudinary / Local │
-                 │ (LLM, fallback) │      │ (multilingual,384)│      │ File Storage       │
+                 │ Groq / Gemini   │      │ Gemini Embedding   │      │ Cloudinary / Local │
+                 │ (LLM, fallback) │      │ (3072) / Local 384 │      │ File Storage       │
                  └─────────────────┘      └────────────────────┘      └────────────────────┘
 ```
 
 **Nguyên tắc kiến trúc:**
 - **Clean Architecture 4 lớp** (Presentation → Application → Domain → Infrastructure), luật phụ thuộc luôn hướng vào trong; Domain không import gì từ Infrastructure.
 - **Modular Monolith / feature-first**: mỗi bounded context (Ticket, RAG, AI, Escalation...) là 1 module tự chứa, giao tiếp liên module chỉ qua Facade export tường minh hoặc Domain Event (`EventEmitter2`) — sẵn sàng tách Microservices sau này mà không phải viết lại business logic.
-- **API và Worker dùng chung 1 codebase** (`libs/`), khác nhau chỉ ở entrypoint (`apps/api/main.ts` vs `apps/worker/worker.main.ts`) — tránh trùng lặp logic, scale độc lập từng process.
+- **API và Worker dùng chung 1 codebase** (`libs/`), khác nhau chỉ ở entrypoint (`apps/api/main.ts` vs `apps/worker/worker.main.ts`) — tránh trùng lặp logic. Production gộp trong **1 Web Service** qua `scripts/start-merged.mjs` (API `$PORT` + Worker `$WORKER_PORT=3001`) để vừa `750h` free-tier; local vẫn có thể chạy tách `docker compose up api worker` để log riêng.
 - **Channel Adapter Pattern**: mọi kênh tiếp nhận (Web/Telegram/Gmail/Email webhook) hội tụ về đúng 1 `CreateTicketUseCase`, không rẽ nhánh business logic theo kênh.
 - **Port/Adapter cho LLM & Embedding**: `ILlmProvider`/`IEmbeddingProvider` do Application/Domain định nghĩa, Infrastructure implement (Groq/Gemini/Local) — đổi provider không sửa business logic.
 
@@ -85,32 +89,33 @@ Backend API cho hệ thống Automation/Agent tiếp nhận yêu cầu từ **nh
 
 ```mermaid
 erDiagram
-    USER ||--o{ REFRESH_TOKEN : so_huu
-    USER ||--o{ TICKET : duoc_gan_agent
-    USER ||--o{ ESCALATION : duoc_gan_agent
-
-    CUSTOMER ||--o{ TICKET : gui_yeu_cau
-
-    TICKET ||--o{ TICKET_MESSAGE : gom
-    TICKET ||--o{ TICKET_STATUS_HISTORY : lich_su_chuyen_trang_thai
-    TICKET ||--|| CONVERSATION : ngu_canh_hoi_thoai
-    TICKET ||--o{ ESCALATION : co_the_escalate
-    TICKET ||--o{ TICKET : trung_lap_voi
-
-    CONVERSATION ||--o{ CONVERSATION_TURN : gom
-
-    KNOWLEDGE_DOCUMENT ||--o{ KNOWLEDGE_CHUNK : duoc_chunk
-    KNOWLEDGE_CHUNK ||--|| CHUNK_EMBEDDING : co_vector
+    USER ||--o{ REFRESH_TOKEN : "so_huu"
+    USER ||--o{ TICKET : "duoc_gan"
+    USER ||--o{ ESCALATION : "xu_ly"
+    CUSTOMER ||--o{ TICKET : "gui_yeu_cau"
+    TICKET ||--o{ TICKET_MESSAGE : "gom"
+    TICKET ||--o{ TICKET_STATUS_HISTORY : "lich_su"
+    TICKET ||--|| CONVERSATION : "co"
+    TICKET ||--o{ ESCALATION : "escalate"
+    TICKET ||--o{ TICKET : "trung_lap"
+    CONVERSATION ||--o{ CONVERSATION_TURN : "gom"
+    KNOWLEDGE_DOCUMENT ||--o{ KNOWLEDGE_CHUNK : "chunk"
+    KNOWLEDGE_CHUNK ||--|| CHUNK_EMBEDDING : "vector"
 
     USER {
         string id PK
-        string email
+        string email UK
         string role
         boolean isActive
     }
+    REFRESH_TOKEN {
+        string id PK
+        string userId FK
+        datetime expiresAt
+    }
     CUSTOMER {
         string id PK
-        string email
+        string email UK
         string name
     }
     TICKET {
@@ -118,7 +123,6 @@ erDiagram
         string customerId FK
         string channel
         string status
-        string category
         string priority
         float confidenceScore
         boolean isSpam
@@ -130,11 +134,22 @@ erDiagram
         string sender
         string content
     }
-    CONVERSATION {
+    TICKET_STATUS_HISTORY {
         string id PK
         string ticketId FK
-        string summary
+        string fromStatus
+        string toStatus
+    }
+    CONVERSATION {
+        string id PK
+        string ticketId FK_UK
         int turnCount
+    }
+    CONVERSATION_TURN {
+        string id PK
+        string conversationId FK
+        string role
+        string content
     }
     KNOWLEDGE_DOCUMENT {
         string id PK
@@ -147,10 +162,9 @@ erDiagram
         string documentId FK
         string content
         int chunkIndex
-        string section
     }
     CHUNK_EMBEDDING {
-        string chunkId PK
+        string chunkId PK_FK
         string embeddingModel
         int dimensions
     }
@@ -158,12 +172,51 @@ erDiagram
         string id PK
         string ticketId FK
         string reason
-        datetime slaDeadline
         string status
+        datetime slaDeadline
+    }
+    PROMPT_LOG {
+        string id PK
+        string ticketId FK
+        string useCase
+        string provider
+    }
+    AUDIT_LOG {
+        string id PK
+        string actorType
+        string action
+        string resourceType
+    }
+    NOTIFICATION_LOG {
+        string id PK
+        string type
+        string channel
+        string status
+    }
+    DAILY_METRIC_SNAPSHOT {
+        datetime date PK
+        int totalTickets
+        int escalatedCount
+    }
+    CATEGORY {
+        string id PK
+        string name UK
+        boolean isActive
+    }
+    ROUTING_RULE {
+        string id PK
+        string name
+        int priority
+        string action
+    }
+    SYSTEM_SETTING {
+        string id PK
+        string key UK
+        string category
     }
 ```
 
-17 bảng nghiệp vụ, chia nhóm: Identity, Customer/Ticket/Conversation, Knowledge Base/RAG, AI (PromptLog), Routing/Escalation, Vận hành (Notification/Audit/Analytics). Chi tiết đầy đủ và lý do thiết kế từng bảng xem `prisma/schema.prisma` và Mục 10 của `TDD-Track-D-AI-Customer-Support.md`.
+19 bảng nghiệp vụ, chia nhóm: Identity (2), Customer/Ticket/Conversation (6), Knowledge Base/RAG (3), AI/Escalation (2), Vận hành Audit/Notification/Analytics (3), Admin Category/RoutingRule/SystemSetting (3). Chi tiết đầy đủ và lý do thiết kế từng bảng xem `prisma/schema.prisma` và Mục 10 của `TDD-Track-D-AI-Customer-Support.md`.
 
 ---
 
@@ -176,7 +229,7 @@ erDiagram
 | ORM | Prisma | Type-safe, migration, raw SQL cho phần vector/full-text search |
 | Queue | BullMQ + Redis (ioredis) | Background job: parse tài liệu, embedding, gửi email, notification |
 | LLM | Groq (Llama 3.3, primary) + Google Gemini (fallback) | `LlmOrchestratorProvider` tự chuyển provider khi rate-limit/lỗi |
-| Embedding | `Xenova/paraphrase-multilingual-MiniLM-L12-v2` (384 chiều, 50+ ngôn ngữ, chạy local qua `@xenova/transformers` — mặc định) hoặc Gemini `gemini-embedding-001` | Không phụ thuộc rate-limit ngoài, tiết kiệm quota cho phần generation; đổi model qua `EMBEDDING_MODEL` |
+| Embedding | `Gemini gemini-embedding-001` (3072 chiều, production) hoặc `Xenova/paraphrase-multilingual-MiniLM-L12-v2` (384 chiều, 50+ ngôn ngữ, chạy local qua `@xenova/transformers`) | `EMBEDDING_PROVIDER=gemini` (khuyến nghị production, đã re-index 3072) hoặc `local` (tiết kiệm quota, tốn RAM 470MB); đổi qua `EMBEDDING_PROVIDER`/`EMBEDDING_MODEL` |
 | Auth | JWT (access 15p + refresh token rotation, opaque `id.secret`) | RBAC 3 role: ADMIN / AGENT / VIEWER |
 | File Storage | Cloudinary (`resource_type: raw`) hoặc Local Filesystem | Lưu tài liệu Knowledge Base gốc (PDF/DOCX/TXT/MD) |
 | Kênh tiếp nhận | Web REST, Telegram Bot API, Gmail (IMAP polling + SMTP), Mailgun Inbound Webhook | Channel Adapter Pattern — cùng hội tụ 1 Use Case |
@@ -220,20 +273,22 @@ Classification → Spam Detection → Duplicate Detection (Jaccard similarity tr
 ## Cấu trúc thư mục
 
 ```
-automation-agent/
+automation-agent-BE/
 ├── apps/
-│   ├── api/            # HTTP entrypoint (NestJS)
-│   └── worker/          # Worker process (BullMQ processors + cron)
+│   ├── api/            # HTTP entrypoint (apps/api/src/main.ts)
+│   └── worker/          # Worker process (apps/worker/src/worker.main.ts, BullMQ processors + cron)
 ├── libs/
-│   ├── modules/         # 17 module nghiệp vụ, mỗi module đủ 4 lớp Clean Architecture
-│   ├── shared/           # Base Entity/VO, Result type, error codes, exception filter
+│   ├── modules/         # 19 module nghiệp vụ, mỗi module đủ 4 lớp Clean Architecture
+│   ├── shared/           # Base Entity/VO, error codes, GlobalExceptionFilter
 │   ├── config/           # Zod env validation, config namespaces
-│   └── infrastructure/   # PrismaService, Redis/Queue, LLM adapters, Storage adapters
-├── workers/               # BullMQ Processor (adapter kích hoạt Use Case, không chứa business logic)
-├── prisma/               # schema.prisma, migrations, seed.ts
-├── docker/                # docker-compose.yml, init-extensions.sql (pgvector)
-├── storage/               # Tài liệu KB mẫu (seed demo)
-└── test/unit/             # Unit test theo module (mock port)
+│   └── infrastructure/   # PrismaService, Redis/Queue, LLM/Embedding/Storage adapters
+├── prisma/               # schema.prisma, migrations (19 bảng), seed.ts
+├── scripts/              # start-merged.mjs (gộp API+Worker), prefetch-embedding-model.mjs, reindex-embeddings.mjs
+├── docker/               # postgres/init-extensions.sql (pgvector)
+├── storage/               # Tài liệu KB mẫu (seed demo, *.md)
+├── docker-compose.yml    # postgres + redis + api + worker (local tách, prod gộp)
+├── Dockerfile            # merged API+Worker (production, prune dev deps)
+└── Dockerfile.worker     # worker riêng (local)
 ```
 
 Chi tiết lý do tổ chức từng thư mục xem Mục 6 của `TDD-Track-D-AI-Customer-Support.md`.
@@ -306,7 +361,7 @@ npm run start:worker:dev        # Worker process (queue: document-parser, embedd
 
 > **Frontend đi kèm**: dashboard Next.js nằm ở repo riêng `automation-agent-FE` (xem README project đó) — chạy độc lập với backend này, kết nối qua `NEXT_PUBLIC_API_BASE_URL`.
 
-### Thử nhanh bằng curl hoặc postman ( link postman https://go.postman.co/workspace/8f65c004-6c33-45cb-8e29-6e5558d375be Nếu sài Postman bằng link nhớ phải vào thêm vào Enviroment URL: base_url: http://localhost:3000 , url_main: https://automation-agent-fhbl.onrender.com )
+### Thử nhanh bằng curl hoặc Postman (https://www.postman.com/hdthinh3105/workspace/automationagent — nhớ tạo Environment với `base_url: http://localhost:3000`, `url_main: https://automation-agent-052r.onrender.com`)
 ```bash
 # Đăng nhập
 curl -X POST http://localhost:3000/api/auth/login \
@@ -332,11 +387,12 @@ Mọi response bọc trong envelope chuẩn `{ success, data, error, meta }`. M�
 | Redis | `REDIS_HOST`/`REDIS_PORT` hoặc `REDIS_URL` | Dùng cho BullMQ |
 | JWT | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | Bắt buộc ≥32 ký tự, khác nhau |
 | LLM | `GROQ_API_KEY`, `GEMINI_API_KEY`, `GROQ_MODEL`, `GEMINI_MODEL` | Optional lúc boot, throw rõ khi thực sự gọi mà thiếu key |
-| Embedding | `EMBEDDING_PROVIDER` (`local`/`gemini`), `EMBEDDING_MODEL` (mặc định `Xenova/paraphrase-multilingual-MiniLM-L12-v2`), `EMBEDDING_DIMENSIONS` | Chạy `npm run prefetch:model` để tải model trước (tránh giật lần embed đầu) |
+| Embedding | `EMBEDDING_PROVIDER` (`gemini`/`local`), `EMBEDDING_MODEL` (`gemini-embedding-001` hoặc `Xenova/paraphrase-multilingual-MiniLM-L12-v2`), `EMBEDDING_DIMENSIONS` (`3072` cho Gemini, `384` cho local) | Gemini là mặc định production (đã re-index 3072); local cần `npm run prefetch:model` và tốn RAM 470MB |
 | RAG | `CHUNK_SIZE_TOKENS`, `RAG_TOP_K_RETRIEVAL` (mặc định 25), `RAG_TOP_K_FINAL` (mặc định 8), `AI_CONFIDENCE_ESCALATION_THRESHOLD`, `SPAM_SCORE_THRESHOLD` | Config-driven, không hard-code |
-| Kênh | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_POLLING_ENABLED` (true = long-poll getUpdates không cần URL public; false = webhook), `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `EMAIL_POLLING_ENABLED` | `GMAIL_APP_PASSWORD` dùng cho IMAP polling; bộ 3 `GMAIL_CLIENT_*` dùng để gửi qua REST API |
-| Storage | `STORAGE_DRIVER` (`local`/`cloudinary`), `CLOUDINARY_*` | |
+| Kênh | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_POLLING_ENABLED` (true = long-poll `getUpdates` không cần URL public; false = webhook), `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `EMAIL_POLLING_ENABLED` | `GMAIL_APP_PASSWORD` dùng cho IMAP polling; bộ 3 `GMAIL_CLIENT_*` dùng để gửi qua Gmail REST API |
+| Storage | `STORAGE_DRIVER` (`local`/`cloudinary`), `CLOUDINARY_*`, `STORAGE_LOCAL_PATH` | `cloudinary` bắt buộc trên Render (ephemeral disk) |
 | Notification | `ADMIN_NOTIFICATION_EMAIL`, `SMTP_*` | Kênh thông báo nội bộ, tách khỏi kênh trả lời khách |
+| Worker | `WORKER_PORT` (mặc định `3001`), `PORT` | Worker health server bind riêng khi gộp |
 
 Xem đầy đủ + validate bằng Zod tại `libs/config/env.validation.ts` (fail-fast khi thiếu biến bắt buộc).
 
@@ -403,24 +459,25 @@ Muốn cập nhật dependency có chủ đích: để Dependabot tạo PR (nhó
 
 ## Deploy lên Render
 
-Backend deploy production lên **Render** (API + Worker) qua **Deploy Hooks** — push vào `main` sẽ tự trigger redeploy. Không cần GHCR: Render build trực tiếp từ repo qua `Dockerfile` / `Dockerfile.worker`.
+Backend deploy production lên **Render** (1 Web Service merged API+Worker) qua **Deploy Hook** — push vào `main` sẽ tự trigger redeploy. Không cần GHCR: Render build trực tiếp từ repo (Node native).
 
 ### Chuẩn bị 1 lần (Render Dashboard)
 
-1. **API Service**: tạo **Web Service** → connect repo `automation-agent-BE` → branch `main` → **Root Directory** để trống → **Runtime** Docker → **Dockerfile** = `Dockerfile` (API).
-2. **Worker Service**: tạo **Web Service** (self-host / Render) → cùng repo → **Dockerfile** = `Dockerfile.worker` (Worker chỉ để pass health-check `/` củ Render, không phục vụ nghiệp vụ — xem `apps/worker/src/worker.main.ts`).
-3. **Database**: dùng **Render PostgreSQL** (có bật extension `vector` + `pg_trgm`) hoặc Postgres ngoài; lấy `DATABASE_URL`.
-4. Lần đầu: Render auto-chạy migration không đảm bảo — nên chạy migration + seed thủ công (xem bước seed dưới).
+1. **Web Service (merged)**: tạo **Web Service** → connect repo `automation-agent-BE` → branch `main` → **Root Directory** để trống → **Runtime** `Node` → **Build Command** = `npm install && npm run build && npm run build:worker` → **Start Command** = `node scripts/start-merged.mjs` (gộp API `$PORT` + Worker `$WORKER_PORT=3001` trong 1 container, tiết kiệm `750h` free-tier — local vẫn có thể `docker compose up api worker` tách log).
+2. **Database**: dùng **Neon**/**Render PostgreSQL** (đã bật extension `vector`) hoặc Postgres ngoài; lấy `DATABASE_URL` (Neon cần `?sslmode=require`).
+3. **Redis**: dùng Redis ngoài ([Upstash](https://upstash.com)/[Redis Cloud](https://redis.com)), lấy `REDIS_URL` (`rediss://` với TLS) — **không dùng Redis local khi deploy**.
+4. Lần đầu: đặt **Pre-deploy Command** = `npx prisma migrate deploy --schema=prisma/schema.prisma` để migration chạy trước mỗi deploy (tránh cold start chạy migrate trong `CMD`).
 
 ### Cấu hình biến môi trường (Render → Environment)
 
-Trên **cả 2 service** (API + Worker), copy các biến từ `.env.example` sang Render, chỉnh giá trị cho production. Bắt buộc tối thiểu:
-- `DATABASE_URL` — Postgres Render.
-- `REDIS_HOST` + `REDIS_PORT` (dùng Redis ngoài, vd [Upstash](https://upstash.com)/[Redis Cloud](https://redis.com)) — **không dùng Redis local khi deploy**.
+Trên **service duy nhất**, copy các biến từ `.env.example` sang Render, chỉnh cho production. Bắt buộc tối thiểu:
+- `DATABASE_URL` — Postgres Neon/Render.
+- `REDIS_URL` (hoặc `REDIS_HOST`/`REDIS_PORT`/`REDIS_TLS`) — Upstash.
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` — chuỗi ≥32 ký tự, khác nhau.
-- `GROQ_API_KEY`, `GEMINI_API_KEY` — LLM.
-- `CORS_ORIGIN` — domain FE trên Vercel (`https://<your-fe>.vercel.app`).
-- Các biến kênh: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_POLLING_ENABLED` (đặt `false` khi có URL public → dùng webhook), bộ Gmail, `CLOUDINARY_*`...
+- `GROQ_API_KEY`, `GEMINI_API_KEY`, `GROQ_MODEL`, `GEMINI_MODEL` — LLM.
+- `EMBEDDING_PROVIDER=gemini`, `EMBEDDING_DIMENSIONS=3072` (production đã re-index) — hoặc `local` nếu muốn tiết kiệm quota.
+- `CORS_ORIGIN` — domain FE trên Vercel (`https://automation-agent-fe.vercel.app`).
+- Các biến kênh: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_POLLING_ENABLED` (đặt `false` khi có URL public → dùng webhook), bộ Gmail (`GMAIL_CLIENT_ID/SECRET/REFRESH_TOKEN`), `CLOUDINARY_*`, `STORAGE_DRIVER=cloudinary`...
 
 ### Bật GitHub Actions deploy hook
 
@@ -428,18 +485,16 @@ Trên **cả 2 service** (API + Worker), copy các biến từ `.env.example` sa
 
 | Secret | Lấy từ |
 |---|---|
-| `RENDER_DEPLOY_HOOK_API` | Render → API Service → Settings → **Deploy Hook** → copy URL |
-| `RENDER_DEPLOY_HOOK_WORKER` | Render → Worker Service → Settings → Deploy Hook → copy URL |
+| `RENDER_DEPLOY_HOOK_API` | Render → Web Service → Settings → **Deploy Hook** → copy URL |
 
-> Nếu chưa set secret, workflow tự **skip** (không fail) — push vẫn chạy CI bình thường.
+> Nếu chưa set secret, workflow tự **skip** (không fail) — push vẫn chạy CI bình thường. Không cần `RENDER_DEPLOY_HOOK_WORKER` nữa (đã gộp).
 
 ### Migration + seed lần đầu (trên production)
 
 ```bash
-# run một lần từ local trỏ DATABASE_URL production, hoặc dùng Render Shell:
-npx prisma migrate deploy
-npx prisma generate
-# tạo admin tài khoản (an toàn: revert sau khi chạy):
+# Pre-deploy Command đã chạy migrate deploy tự động. Nếu chạy thủ công:
+npx prisma migrate deploy --schema=prisma/schema.prisma
+# tạo admin tài khoản (chạy 1 lần, từ local trỏ DATABASE_URL production hoặc Render Shell):
 npx ts-node --transpile-only prisma/seed.ts
 ```
 
@@ -470,7 +525,7 @@ Trung thực về phạm vi — hệ thống được thiết kế theo nguyên 
 - **Kênh Email/Mailgun** mỗi email tạo 1 ticket mới, chưa gộp email cùng chuỗi (`In-Reply-To`) vào 1 ticket cũ.
 - **Re-ranking bằng LLM** tiêu tốn thêm 1 lượt gọi LLM cho mỗi câu hỏi — có thể tắt bằng cách để `topKRetrieval ≤ topKFinal` nếu cần tiết kiệm quota free-tier.
 - **Free tier LLM (Groq/Gemini)** có thể bị rate-limit ở lượng truy cập cao — đã có fallback chain + escalate tự động khi cả 2 provider cùng lỗi, không để ticket kẹt trạng thái.
-- **Worker health-check** trên các nền tảng chỉ hỗ trợ "Web Service" (không có Background Worker miễn phí) cần mở kèm 1 HTTP server tối giản chỉ để pass health-check — không phục vụ nghiệp vụ.
+- **Worker health-check** trên Render free (chỉ có Web Service) cần HTTP server tối giản — production gộp API+Worker qua `scripts/start-merged.mjs`, worker bind `WORKER_PORT=3001` riêng để pass health-check nội bộ, không tốn thêm service.
 
 Chi tiết đầy đủ và các quyết định đánh đổi khác xem Mục 15 và Mục 17 (Nhật ký quyết định) của `TDD-Track-D-AI-Customer-Support.md`.
 
