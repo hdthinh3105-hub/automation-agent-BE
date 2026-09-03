@@ -142,7 +142,7 @@ erDiagram
     }
     CONVERSATION {
         string id PK
-        string ticketId FK_UK
+        string ticketId FK
         int turnCount
     }
     CONVERSATION_TURN {
@@ -164,7 +164,7 @@ erDiagram
         int chunkIndex
     }
     CHUNK_EMBEDDING {
-        string chunkId PK_FK
+        string chunkId PK
         string embeddingModel
         int dimensions
     }
