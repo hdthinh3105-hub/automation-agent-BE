@@ -211,7 +211,7 @@ erDiagram
     }
     SYSTEM_SETTING {
         string id PK
-        string key UK
+        string settingKey UK
         string category
     }
 ```
