@@ -1,5 +1,5 @@
 # ── Stage 1: Install deps & build (cần build-tools để compile bcrypt) ──
-FROM node:20-slim AS builder
+FROM node:26-slim AS builder
 
 WORKDIR /app
 
@@ -19,7 +19,7 @@ RUN npm run build
 RUN npm run build:worker
 
 # ── Stage 2: Production image ──
-FROM node:20-slim AS production
+FROM node:26-slim AS production
 
 RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 
