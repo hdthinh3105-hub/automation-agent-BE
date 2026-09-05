@@ -33,8 +33,4 @@ export interface NotificationJobData {
   notificationLogId: string;
 }
 
-export type JobsQueueData =
-  | DocumentParserJobData
-  | EmbeddingJobData
-  | EmailJobData
-  | NotificationJobData;
+export type JobsQueueData = DocumentParserJobData | EmbeddingJobData | EmailJobData | NotificationJobData;
