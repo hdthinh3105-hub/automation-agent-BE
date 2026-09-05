@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '@app/infrastructure/prisma/prisma.service';
-import { DOCUMENT_PARSER_QUEUE } from '@app/infrastructure';
+import { JOBS_QUEUE } from '@app/infrastructure';
 
 export interface HealthCheckResult {
   status: 'ok' | 'degraded';
@@ -18,7 +18,7 @@ export interface HealthCheckResult {
 export class HealthCheckService {
   constructor(
     private readonly prisma: PrismaService,
-    @InjectQueue(DOCUMENT_PARSER_QUEUE) private readonly queue: Queue,
+    @InjectQueue(JOBS_QUEUE) private readonly queue: Queue,
   ) {}
 
   async checkReadiness(): Promise<HealthCheckResult> {

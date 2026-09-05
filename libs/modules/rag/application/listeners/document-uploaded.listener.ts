@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { DOCUMENT_PARSER_QUEUE, DocumentParserJobData } from '@app/infrastructure';
+import { JOBS_QUEUE, JOB_PARSE_DOCUMENT, DocumentParserJobData } from '@app/infrastructure';
 import { DocumentUploadedEvent } from '@app/modules/knowledge-base';
 
 /**
@@ -17,12 +17,23 @@ export class DocumentUploadedListener {
   private readonly logger = new Logger(DocumentUploadedListener.name);
 
   constructor(
-    @InjectQueue(DOCUMENT_PARSER_QUEUE) private readonly queue: Queue<DocumentParserJobData>,
+    @InjectQueue(JOBS_QUEUE) private readonly queue: Queue<DocumentParserJobData>,
   ) {}
 
   @OnEvent('knowledge_base.document_uploaded')
   async handle(event: DocumentUploadedEvent): Promise<void> {
     this.logger.log(`Enqueuing document-parser job for document "${event.documentId}"`);
-    await this.queue.add('parse', { documentId: event.documentId });
+    await this.queue.add(
+      JOB_PARSE_DOCUMENT,
+      { documentId: event.documentId },
+      // Giữ nguyên semantics cũ của queue document-parser: retry 3 lần,
+      // backoff exponential 2s (trước đây khai báo ở QueueModule).
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 },
+        removeOnComplete: { count: 100 },
+        removeOnFail: false,
+      },
+    );
   }
 }

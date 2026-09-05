@@ -1,19 +1,20 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
-import {
-  DOCUMENT_PARSER_QUEUE,
-  EMBEDDING_QUEUE,
-  EMAIL_QUEUE,
-  NOTIFICATION_QUEUE,
-} from './queue.tokens';
+import { JOBS_QUEUE } from './queue.tokens';
 
 /**
- * TDD Mục 2.6 / Mục 12 — Redis + BullMQ. 4 queue:
- * - document-parser / embedding: RAG Pipeline (Ngày 3)
- * - email: trả lời khách qua Gmail SMTP (Ngày 4 — root fix "Connection
- *   timeout", tách khỏi process API/polling để không tranh CPU với AI)
- * - notification: báo Agent/Admin qua email nội bộ (Ngày 5)
+ * TDD Mục 2.6 / Mục 12 — Redis + BullMQ. 1 queue duy nhất `jobs`
+ * (gộp từ 4 queue cũ: document-parser/embedding/email/notification):
+ * - document.parse / chunks.embed: RAG Pipeline (Ngày 3)
+ * - email.send: trả lời khách qua Gmail (Ngày 4 — tách khỏi process
+ *   API/polling để không tranh CPU với AI)
+ * - notification.send: báo Agent/Admin qua email nội bộ (Ngày 5)
+ *
+ * Lý do gộp: Upstash free-tier 500k lệnh/tháng — mỗi worker idle vẫn
+ * long-poll Redis mỗi `drainDelay` giây, 1 worker rẻ hơn 4 worker nhiều.
+ * Retry/backoff cấu hình riêng theo từng job lúc `.add()` (xem các
+ * producer), queue chỉ giữ default dọn completed/failed chung.
  */
 @Global()
 @Module({
@@ -50,64 +51,15 @@ import {
       },
     }),
 
-    BullModule.registerQueue(
-      {
-        name: DOCUMENT_PARSER_QUEUE,
-        defaultJobOptions: {
-          attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 2000,
-          },
-          removeOnComplete: {
-            count: 100,
-          },
-          removeOnFail: false,
+    BullModule.registerQueue({
+      name: JOBS_QUEUE,
+      defaultJobOptions: {
+        removeOnComplete: {
+          count: 100,
         },
+        removeOnFail: false,
       },
-      {
-        name: EMBEDDING_QUEUE,
-        defaultJobOptions: {
-          attempts: 5,
-          backoff: {
-            type: 'exponential',
-            delay: 5000,
-          },
-          removeOnComplete: {
-            count: 100,
-          },
-          removeOnFail: false,
-        },
-      },
-      {
-        name: EMAIL_QUEUE,
-        defaultJobOptions: {
-          attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 10_000,
-          },
-          removeOnComplete: {
-            count: 200,
-          },
-          removeOnFail: false,
-        },
-      },
-      {
-        name: NOTIFICATION_QUEUE,
-        defaultJobOptions: {
-          attempts: 3,
-          backoff: {
-            type: 'fixed',
-            delay: 10000,
-          },
-          removeOnComplete: {
-            count: 100,
-          },
-          removeOnFail: false,
-        },
-      },
-    ),
+    }),
   ],
   exports: [BullModule],
 })

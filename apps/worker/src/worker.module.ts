@@ -5,9 +5,8 @@ import { PrismaModule, QueueModule, StorageModule } from '@app/infrastructure';
 import { KnowledgeBaseModule } from '@app/modules/knowledge-base';
 import { RagModule } from '@app/modules/rag';
 import { GmailChannelAdapter } from '@app/modules/ticket';
-import { DocumentParserProcessor } from './workers/document-parser.processor';
-import { EmbeddingProcessor } from './workers/embedding.processor';
-import { EmailProcessor } from './workers/email.processor';
+import { NotificationModule } from '@app/modules/notification';
+import { JobsProcessor } from './workers/jobs.processor';
 
 @Module({
   imports: [
@@ -18,7 +17,8 @@ import { EmailProcessor } from './workers/email.processor';
     EventEmitterModule.forRoot(),
     KnowledgeBaseModule,
     RagModule,
+    NotificationModule, // dispatcher + repository cho job notification.send
   ],
-  providers: [DocumentParserProcessor, EmbeddingProcessor, GmailChannelAdapter, EmailProcessor],
+  providers: [JobsProcessor, GmailChannelAdapter],
 })
 export class WorkerModule {}

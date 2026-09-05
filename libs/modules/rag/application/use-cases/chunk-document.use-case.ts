@@ -15,7 +15,7 @@ import { DocumentEmptyContentException } from '../../domain/exceptions/rag.excep
  * 🎯 Use Case — bước [2]+[3]+[4] của RAG Pipeline (TDD Mục 7.2): nhận
  * `documentId` (từ BullMQ job `document-parser`), extract text, chunk,
  * lưu `KnowledgeChunk`. KHÔNG tự embed — đó là `EmbedChunksUseCase`
- * (bước [5]), enqueue riêng bởi `DocumentParserProcessor` sau khi hàm
+ * (bước [5]), enqueue riêng bởi `JobsProcessor` sau khi hàm
  * này chạy xong (giữ đúng ranh giới 2 Worker độc lập, TDD Mục 12).
  */
 @Injectable()

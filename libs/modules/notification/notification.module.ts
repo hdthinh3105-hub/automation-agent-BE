@@ -12,7 +12,7 @@ import { EscalationNotificationListener } from './application/listeners/escalati
 /**
  * TDD Mục 5.10 — Notification Module. Import vào CẢ `apps/api`
  * (`SendNotificationUseCase` để enqueue + listener bắt event tạo ra ở
- * API) lẫn `apps/worker` (`NotificationProcessor`/`NotificationDispatcherService`
+ * API) lẫn `apps/worker` (`JobsProcessor`/`NotificationDispatcherService`
  * để thực thi gửi thật, + listener bắt event tạo ra ở Worker).
  */
 @Module({

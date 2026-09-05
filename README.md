@@ -402,7 +402,7 @@ Xem đầy đủ + validate bằng Zod tại `libs/config/env.validation.ts` (fa
 
 Từ ngày **26/09/2025**, Render **chặn outbound tới các port SMTP** (`25`, `465`, `587`) trên free tier (https://render.com/changelog/free-web-services-will-no-longer-allow-outbound-traffic-to-smtp-ports) — khiến mọi lần gửi Gmail SMTP đều `Connection timeout` giữa chừng. Để gửi mail trên Render free tier, hệ thống đã chuyển `GmailChannelAdapter.sendMailDirect()` sang **Gmail REST API** (HTTPS port 443, không bị chặn).
 
-**Cách hoạt động:** vẫn giữ luồng cũ — API enqueue job → Worker `EmailProcessor` gửi thật. Chỉ khác cơ chế gửi:
+**Cách hoạt động:** vẫn giữ luồng cũ — API enqueue job `email.send` vào queue `jobs` → Worker `JobsProcessor` gửi thật. Chỉ khác cơ chế gửi:
 
 | Bộ cấu hình | Cơ chế dùng |
 |---|---|

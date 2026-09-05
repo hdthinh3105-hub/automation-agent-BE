@@ -6,7 +6,7 @@ import * as nodemailer from 'nodemailer';
 import { ParsedMail } from 'mailparser';
 import { convert as htmlToText } from 'html-to-text';
 import { IChannelAdapter, CreateTicketCommand } from '../../application/ports/channel-adapter.port';
-import { EMAIL_QUEUE, EmailJobData } from '@app/infrastructure';
+import { JOBS_QUEUE, JOB_SEND_EMAIL, EmailJobData } from '@app/infrastructure';
 
 /**
  * Channel Adapter — Could have (TDD Mục 5.3, 14.1). Thay thế Mailgun:
@@ -21,10 +21,10 @@ import { EMAIL_QUEUE, EmailJobData } from '@app/infrastructure';
  * embedding, handshake không kịp hoàn tất trong `connectionTimeout` dù
  * mạng không hề bị chặn.
  *
- * `sendMail()` giờ CHỈ enqueue job vào `EMAIL_QUEUE` (BullMQ/Redis) —
- * trả về gần như ngay lập tức, không còn chạm SMTP trong process API/
- * polling. Việc gửi SMTP thật được chuyển hẳn sang `EmailProcessor`
- * (apps/worker) — 1 process riêng, không tranh CPU với embedding/LLM.
+ * `sendMail()` giờ CHỈ enqueue job `email.send` vào queue `jobs`
+ * (BullMQ/Redis) — trả về gần như ngay lập tức, không còn chạm SMTP
+ * trong process API/polling. Việc gửi thật do `JobsProcessor`
+ * (apps/worker) đảm nhiệm — 1 process riêng, không tranh CPU với AI.
  */
 @Injectable()
 export class GmailChannelAdapter implements IChannelAdapter {
@@ -40,7 +40,7 @@ export class GmailChannelAdapter implements IChannelAdapter {
 
   constructor(
     private readonly configService: ConfigService,
-    @InjectQueue(EMAIL_QUEUE) private readonly emailQueue: Queue<EmailJobData>,
+    @InjectQueue(JOBS_QUEUE) private readonly emailQueue: Queue<EmailJobData>,
   ) {
     this.gmailUser = this.configService.get<string>('email.gmailUser');
     this.gmailAppPassword = this.configService.get<string>('email.gmailAppPassword');
@@ -106,11 +106,19 @@ export class GmailChannelAdapter implements IChannelAdapter {
     }
     try {
       await this.emailQueue.add(
-        'send',
+        JOB_SEND_EMAIL,
         { to, subject, text },
-        // jobId để BullMQ tự loại trùng nếu vô tình enqueue lại đúng
-        // (to, subject) trong cùng giây — không bắt buộc nhưng an toàn.
-        { jobId: `email:${Date.now()}:${to}` },
+        // Giữ nguyên semantics cũ của queue email: retry 3 lần, backoff
+        // exponential 10s (trước đây khai báo ở QueueModule). jobId để
+        // BullMQ tự loại trùng nếu vô tình enqueue lại đúng (to, subject)
+        // trong cùng giây — không bắt buộc nhưng an toàn.
+        {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 10_000 },
+          removeOnComplete: { count: 200 },
+          removeOnFail: false,
+          jobId: `email:${Date.now()}:${to}`,
+        },
       );
       this.logger.log(`>>> Đã enqueue email tới ${to} (subject="${subject}") — worker sẽ gửi.`);
     } catch (error) {
@@ -124,9 +132,9 @@ export class GmailChannelAdapter implements IChannelAdapter {
   }
 
   /**
-   * Gửi mail THẬT — chỉ được gọi từ `EmailProcessor` (apps/worker), một
+   * Gửi mail THẬT — chỉ được gọi từ `JobsProcessor` (apps/worker), một
    * process riêng biệt. KHÔNG catch lỗi ở đây: để lỗi throw ra ngoài cho
-   * BullMQ tự retry theo `defaultJobOptions` (3 lần, backoff 10s/40s/160s).
+   * BullMQ tự retry (3 lần, backoff exponential 10s).
    *
    * Mặc định gửi qua Gmail REST API (OAuth2, HTTPS port 443) — không bị
    * Render free tier chặn như SMTP 465/587 (chính sách từ 26/09/2025).

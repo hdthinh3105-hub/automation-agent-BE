@@ -10,8 +10,8 @@
  *      ẩn khỏi RAG query (vectorSearch chỉ tìm doc READY), tránh lỗi chiều
  *      giữa chừng.
  *   3. Enqueue 1 job `embed` cho từng document vào queue "embedding".
- *      Worker (EmbeddingProcessor) sẽ embed lại bằng model hiện tại và set
- *      status = READY.
+ *      Worker (JobsProcessor) sẽ parse + embed lại bằng model hiện tại
+ *      và set status = READY.
  *
  * Idempotent: chạy lại nhiều lần đều an toàn (chunk đã embed bị bỏ qua bởi
  * EmbedChunksUseCase).
@@ -28,7 +28,8 @@
 import { PrismaClient } from '@prisma/client';
 import { Queue } from 'bullmq';
 
-const EMBEDDING_QUEUE = 'embedding';
+const JOBS_QUEUE = 'jobs';
+const JOB_PARSE_DOCUMENT = 'document.parse';
 
 async function main() {
   const prisma = new PrismaClient();
@@ -59,14 +60,15 @@ async function main() {
     });
   }
 
-  // 4) Enqueue job embedding cho từng document
-  const queue = new Queue(EMBEDDING_QUEUE, {
+  // 4) Enqueue job parse cho từng document (worker parse xong sẽ tự
+  // enqueue tiếp job chunks.embed — pipeline RAG chạy lại từ đầu)
+  const queue = new Queue(JOBS_QUEUE, {
     connection: { url: redisUrl, maxRetriesPerRequest: null },
   });
   try {
     for (const doc of docs) {
-      await queue.add('embed', { documentId: doc.id });
-      console.log(`  -> enqueued embed for "${doc.title}" (${doc.id})`);
+      await queue.add(JOB_PARSE_DOCUMENT, { documentId: doc.id });
+      console.log(`  -> enqueued parse for "${doc.title}" (${doc.id})`);
     }
   } finally {
     await queue.close();
