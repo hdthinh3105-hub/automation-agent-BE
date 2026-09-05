@@ -54,7 +54,7 @@
     "groq-sdk": "^0.7.0",
     "helmet": "^7.1.0",
     "html-to-text": "^10.0.0",
-    "imapflow": "^1.0.184",
+    "imapflow": "^1.7.8",
     "ioredis": "^5.4.1",
     "mailparser": "^3.7.1",
     "mammoth": "^1.8.0",
