@@ -20,14 +20,22 @@ import {
  * chung cho Worker: "chạy lại nhiều lần với cùng input không gây
  * side-effect sai").
  *
- * `drainDelay`/`stalledInterval` (root fix cho "quota tăng liên tục" trên
- * Upstash) chuyển từ `QueueModule.registerQueue({ settings })` sang đây vì
- * trong BullMQ đây là option của Worker, không phải của Queue.
+ * `drainDelay`/`stalledInterval`/`guardInterval` (root fix cho "quota
+ * tăng liên tục" trên Upstash free 500k lệnh/tháng) là option của Worker
+ * (không phải Queue). Worker idle vẫn tick liên tục: guard mặc định 5s
+ * (~0.2 lệnh/s/worker ≈ 518k/tháng cho 1 worker!) nên phải nới hết cỡ cho
+ * vừa free-tier. Đánh đổi: retry có backoff (delayed) trễ thêm tối đa
+ * ~guardInterval; job mới vẫn được đánh thức ngay qua pub/sub.
  */
 // `lockDuration` nâng lên 10 phút: embed nhiều chunk qua Gemini (mỗi chunk
 // 1 HTTP request) dễ vượt lock mặc định 30s của BullMQ -> nếu không nâng sẽ
 // dính lỗi "Missing lock for job" (worker mất quyền hoàn tất job giữa chừng).
-@Processor(EMBEDDING_QUEUE, { drainDelay: 30, stalledInterval: 120_000, lockDuration: 600_000 })
+@Processor(EMBEDDING_QUEUE, {
+  drainDelay: 120,
+  stalledInterval: 300_000,
+  guardInterval: 60_000,
+  lockDuration: 600_000,
+})
 export class EmbeddingProcessor extends WorkerHost {
   private readonly logger = new Logger(EmbeddingProcessor.name);
 

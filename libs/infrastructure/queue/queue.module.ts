@@ -23,11 +23,16 @@ import {
       useFactory: (configService: ConfigService) => {
         const redisUrl = configService.get<string>('queue.redisUrl');
 
+        // `enableReadyCheck: false` bắt buộc cho Upstash (`rediss://`):
+        // ioredis mặc định gửi `INFO` trước khi ready, mỗi lần reconnect
+        // (Render free hay throttle/chập chờn) là 1 chùm lệnh handshake đổ
+        // vào quota 500k/tháng. BullMQ cũng yêu cầu `maxRetriesPerRequest: null`.
         if (redisUrl) {
           return {
             connection: {
               url: redisUrl,
               maxRetriesPerRequest: null,
+              enableReadyCheck: false,
             },
           };
         }
@@ -38,6 +43,7 @@ import {
             port: configService.get<number>('queue.redisPort', 6379),
             password: configService.get<string>('queue.redisPassword'),
             maxRetriesPerRequest: null,
+            enableReadyCheck: false,
             ...(configService.get<boolean>('queue.redisTls', false) ? { tls: {} } : {}),
           },
         };

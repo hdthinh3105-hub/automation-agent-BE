@@ -22,13 +22,17 @@ import { GmailChannelAdapter } from '@app/modules/ticket';
  * `GmailChannelAdapter.sendMail()`). Retry: 3 lần, backoff
  * 10s/40s/160s (khai báo ở `QueueModule.registerQueue`).
  *
- * `drainDelay`/`stalledInterval` (root fix cho "quota tăng liên tục" trên
- * Upstash) chuyển từ `QueueModule.registerQueue({ settings })` sang đây vì
- * trong BullMQ đây là option của Worker, không phải của Queue. `drainDelay`
- * giữ ngắn hơn 2 queue kia (10s thay vì 30s) vì email cần phản hồi nhanh
- * hơn cho khách.
+ * `drainDelay`/`stalledInterval`/`guardInterval` (root fix cho "quota
+ * tăng liên tục" trên Upstash free 500k lệnh/tháng) là option của Worker
+ * (không phải Queue). `drainDelay` giữ ngắn hơn các queue kia (30s) vì
+ * email trả lời khách cần nhanh; job mới vẫn được đánh thức ngay qua
+ * pub/sub nên drain dài không làm chậm job mới, chỉ giảm tick lúc idle.
  */
-@Processor(EMAIL_QUEUE, { drainDelay: 10, stalledInterval: 120_000 })
+@Processor(EMAIL_QUEUE, {
+  drainDelay: 30,
+  stalledInterval: 300_000,
+  guardInterval: 60_000,
+})
 export class EmailProcessor extends WorkerHost {
   private readonly logger = new Logger(EmailProcessor.name);
 
