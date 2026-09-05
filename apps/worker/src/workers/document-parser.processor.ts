@@ -26,20 +26,18 @@ import {
  * lắng nghe để báo Admin — chưa có listener nào ở Đợt 1 này, sự kiện vẫn
  * được emit đúng chuẩn để không phải sửa lại chỗ này khi Phase 8 tới).
  *
- * `drainDelay`/`stalledInterval`/`guardInterval` (root fix cho "quota
- * tăng liên tục" trên Upstash free 500k lệnh/tháng) là option của Worker
- * (không phải Queue). Worker idle vẫn tick liên tục: guard mặc định 5s
- * (~0.2 lệnh/s/worker ≈ 518k/tháng cho 1 worker!) nên phải nới hết cỡ cho
- * vừa free-tier. Đánh đổi: job mới vẫn được đánh thức ngay qua pub/sub
- * (không chờ drain), chỉ retry có backoff (delayed) mới trễ thêm tối đa
- * ~guardInterval.
+ * `drainDelay`/`stalledInterval` (root fix cho "quota tăng liên tục" trên
+ * Upstash free 500k lệnh/tháng) là option của Worker (không phải Queue).
+ * Queue rỗng, worker long-poll 1 lệnh Redis mỗi `drainDelay` giây: mặc định
+ * 5s/worker ≈ 0.6 lệnh/s cho 3 worker ≈ 1.5M lệnh/tháng — vượt quota dù
+ * không có job nào! Nới drain lên 120s (≈130k/tháng) + stalled 300s.
+ * Job mới vẫn được đánh thức ngay qua pub/sub, không chờ hết drain.
  */
 // `lockDuration` nâng lên 5 phút: parse tài liệu (download remote + extract
 // text + chunk) có thể lâu hơn lock mặc định 30s -> tránh "Missing lock for job".
 @Processor(DOCUMENT_PARSER_QUEUE, {
   drainDelay: 120,
   stalledInterval: 300_000,
-  guardInterval: 60_000,
   lockDuration: 300_000,
 })
 export class DocumentParserProcessor extends WorkerHost {

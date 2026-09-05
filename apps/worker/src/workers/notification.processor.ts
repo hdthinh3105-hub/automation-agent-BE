@@ -13,12 +13,11 @@ import {
  * 10s (khai báo ở `QueueModule.registerQueue`).
  *
  * Giữ cùng nhịp idle tiết kiệm Upstash free-tier như các worker khác
- * (guard mặc định 5s tốn ~0.2 lệnh/s ≈ 518k/tháng cho 1 worker).
+ * (drain mặc định 5s/worker ≈ 0.2 lệnh/s ≈ 518k/tháng cho 1 worker).
  */
 @Processor(NOTIFICATION_QUEUE, {
   drainDelay: 120,
   stalledInterval: 300_000,
-  guardInterval: 60_000,
 })
 export class NotificationProcessor extends WorkerHost {
   private readonly logger = new Logger(NotificationProcessor.name);
